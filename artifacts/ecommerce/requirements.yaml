@@ -1,0 +1,20 @@
+packages:
+  "framer-motion": "For page transitions, scroll animations, and polished UI micro-interactions"
+  "uuid": "For generating unique user session IDs for cart and AI tracking"
+  "recharts": "For rendering demand forecast charts in the agent dashboard"
+  "date-fns": "For formatting order dates and timestamps cleanly"
+  "clsx": "Utility for conditionally joining classNames"
+  "tailwind-merge": "Utility for intelligently merging tailwind classes"
+
+images:
+  - path: "artifacts/ecommerce/public/images/hero-bg.png"
+    description: "Abstract high-tech e-commerce background with dark indigo and purple gradient meshes, subtle glowing nodes, clean corporate futuristic vibe"
+    aspect_ratio: "16:9"
+  - path: "artifacts/ecommerce/public/images/ai-dashboard-bg.png"
+    description: "Abstract dark interface background with subtle glowing network nodes, deep blue and orange accents, technical feel"
+    aspect_ratio: "16:9"
+
+notes:
+  - API hooks are imported from @workspace/api-client-react
+  - Session IDs are generated via uuid and persisted in localStorage
+  - framer-motion is used extensively for layout transitions

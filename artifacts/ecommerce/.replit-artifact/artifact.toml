@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "AI E-Commerce Platform"
+version = "1.0.0"
+id = "artifacts/ecommerce"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 18857
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/ecommerce run dev"
+
+[services.env]
+PORT = "18857"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/ecommerce", "run", "build"]
+publicDir = "artifacts/ecommerce/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"

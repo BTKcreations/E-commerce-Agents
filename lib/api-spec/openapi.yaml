@@ -1,22 +1,38 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI-powered E-Commerce Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Product catalog operations
+  - name: cart
+    description: Shopping cart operations
+  - name: orders
+    description: Order management
+  - name: recommendations
+    description: AI recommendation engine
+  - name: pricing
+    description: Dynamic pricing & demand forecasting
+  - name: qa
+    description: Product Q&A agent
+  - name: negotiation
+    description: Negotiation agent
+  - name: support
+    description: Customer support agent
+  - name: openai
+    description: OpenAI chat operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,509 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [price_asc, price_desc, rating, newest]
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /products/{id}/reviews:
+    get:
+      operationId: getProductReviews
+      tags: [products]
+      summary: Get product reviews
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+    post:
+      operationId: addProductReview
+      tags: [products]
+      summary: Add a review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewBody"
+      responses:
+        "201":
+          description: Created review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /cart:
+    get:
+      operationId: getCart
+      tags: [cart]
+      summary: Get current cart
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+    post:
+      operationId: addToCart
+      tags: [cart]
+      summary: Add item to cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddToCartBody"
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /cart/{itemId}:
+    delete:
+      operationId: removeFromCart
+      tags: [cart]
+      summary: Remove item from cart
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List orders
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create order from cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "201":
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /recommendations:
+    post:
+      operationId: getRecommendations
+      tags: [recommendations]
+      summary: Get AI-powered product recommendations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendationsRequestBody"
+      responses:
+        "200":
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationsResponse"
+
+  /pricing/forecast:
+    get:
+      operationId: getPricingForecast
+      tags: [pricing]
+      summary: Get demand forecast and pricing suggestions
+      parameters:
+        - name: productId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pricing forecast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PricingForecastResponse"
+
+  /pricing/adjust:
+    post:
+      operationId: adjustPrice
+      tags: [pricing]
+      summary: AI-powered price adjustment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdjustPriceBody"
+      responses:
+        "200":
+          description: Price adjustment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceAdjustmentResponse"
+
+  /pricing/alerts:
+    get:
+      operationId: getPricingAlerts
+      tags: [pricing]
+      summary: Get reorder alerts for sellers
+      responses:
+        "200":
+          description: Alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PricingAlert"
+
+  /qa/ask:
+    post:
+      operationId: askProductQuestion
+      tags: [qa]
+      summary: Ask AI a question about a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductQuestionBody"
+      responses:
+        "200":
+          description: AI answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductAnswerResponse"
+
+  /qa/search:
+    post:
+      operationId: chatSearch
+      tags: [qa]
+      summary: Natural language product search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatSearchBody"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSearchResponse"
+
+  /negotiation/start:
+    post:
+      operationId: startNegotiation
+      tags: [negotiation]
+      summary: Start a price negotiation session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartNegotiationBody"
+      responses:
+        "200":
+          description: Negotiation started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NegotiationSession"
+
+  /negotiation/offer:
+    post:
+      operationId: makeOffer
+      tags: [negotiation]
+      summary: Make a counter-offer in negotiation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MakeOfferBody"
+      responses:
+        "200":
+          description: Counter-offer response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NegotiationResponse"
+
+  /support/chat:
+    post:
+      operationId: supportChat
+      tags: [support]
+      summary: Chat with customer support AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportChatBody"
+      responses:
+        "200":
+          description: Support response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportChatResponse"
+
+  /support/return:
+    post:
+      operationId: initiateReturn
+      tags: [support]
+      summary: Initiate a return request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitiateReturnBody"
+      responses:
+        "200":
+          description: Return initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnResponse"
+
+  /openai/conversations:
+    get:
+      operationId: listConversations
+      tags: [openai]
+      summary: List conversations
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+    post:
+      operationId: createConversation
+      tags: [openai]
+      summary: Create a conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /openai/conversations/{id}/messages:
+    get:
+      operationId: getConversationMessages
+      tags: [openai]
+      summary: Get messages in conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendOpenaiMessage
+      tags: [openai]
+      summary: Send message to conversation (SSE streaming)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOpenaiMessageBody"
+      responses:
+        "200":
+          description: Streaming response (SSE)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +550,486 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        originalPrice:
+          type: number
+        category:
+          type: string
+        brand:
+          type: string
+        imageUrl:
+          type: string
+        stock:
+          type: integer
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+        specs:
+          type: object
+          additionalProperties: true
+        tags:
+          type: array
+          items:
+            type: string
+        demandScore:
+          type: number
+        createdAt:
+          type: string
+      required: [id, name, price, category, stock, rating, reviewCount]
+
+    CreateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        category:
+          type: string
+        brand:
+          type: string
+        imageUrl:
+          type: string
+        stock:
+          type: integer
+        specs:
+          type: object
+          additionalProperties: true
+        tags:
+          type: array
+          items:
+            type: string
+      required: [name, price, category, stock]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        author:
+          type: string
+        rating:
+          type: integer
+        title:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+      required: [id, productId, author, rating, body]
+
+    CreateReviewBody:
+      type: object
+      properties:
+        author:
+          type: string
+        rating:
+          type: integer
+        title:
+          type: string
+        body:
+          type: string
+      required: [author, rating, body]
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        product:
+          $ref: "#/components/schemas/Product"
+        quantity:
+          type: integer
+        negotiatedPrice:
+          type: number
+      required: [id, productId, quantity]
+
+    Cart:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        total:
+          type: number
+        itemCount:
+          type: integer
+      required: [items, total, itemCount]
+
+    AddToCartBody:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        negotiatedPrice:
+          type: number
+      required: [sessionId, productId, quantity]
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, shipped, delivered, cancelled]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        total:
+          type: number
+        createdAt:
+          type: string
+      required: [id, sessionId, status, items, total]
+
+    CreateOrderBody:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        shippingAddress:
+          type: string
+      required: [sessionId]
+
+    RecommendationsRequestBody:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        productId:
+          type: integer
+        category:
+          type: string
+        viewedProducts:
+          type: array
+          items:
+            type: integer
+      required: [sessionId]
+
+    RecommendationsResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        reasoning:
+          type: string
+      required: [products, reasoning]
+
+    PricingForecastResponse:
+      type: object
+      properties:
+        productId:
+          type: integer
+        currentPrice:
+          type: number
+        suggestedPrice:
+          type: number
+        demandLevel:
+          type: string
+          enum: [low, medium, high, surge]
+        demandScore:
+          type: number
+        forecast:
+          type: string
+        alerts:
+          type: array
+          items:
+            type: string
+        stockStatus:
+          type: string
+      required: [productId, currentPrice, suggestedPrice, demandLevel, demandScore, forecast, stockStatus]
+
+    AdjustPriceBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        reason:
+          type: string
+      required: [productId]
+
+    PriceAdjustmentResponse:
+      type: object
+      properties:
+        productId:
+          type: integer
+        oldPrice:
+          type: number
+        newPrice:
+          type: number
+        reason:
+          type: string
+        changePercent:
+          type: number
+      required: [productId, oldPrice, newPrice, reason, changePercent]
+
+    PricingAlert:
+      type: object
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        alertType:
+          type: string
+          enum: [low_stock, high_demand, price_drop_opportunity, reorder_needed]
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+      required: [productId, productName, alertType, message, severity]
+
+    ProductQuestionBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        question:
+          type: string
+        sessionId:
+          type: string
+      required: [productId, question]
+
+    ProductAnswerResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+        pros:
+          type: array
+          items:
+            type: string
+        cons:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+      required: [answer, pros, cons, confidence]
+
+    ChatSearchBody:
+      type: object
+      properties:
+        query:
+          type: string
+        sessionId:
+          type: string
+      required: [query]
+
+    ChatSearchResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        interpretation:
+          type: string
+        filters:
+          type: object
+          additionalProperties: true
+      required: [products, interpretation]
+
+    StartNegotiationBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        sessionId:
+          type: string
+        offerPrice:
+          type: number
+      required: [productId, sessionId, offerPrice]
+
+    NegotiationSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        productId:
+          type: integer
+        originalPrice:
+          type: number
+        currentOffer:
+          type: number
+        status:
+          type: string
+          enum: [active, accepted, rejected, countered]
+        message:
+          type: string
+        roundsLeft:
+          type: integer
+      required: [sessionId, productId, originalPrice, currentOffer, status, message, roundsLeft]
+
+    MakeOfferBody:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        productId:
+          type: integer
+        offerPrice:
+          type: number
+        previousOffer:
+          type: number
+      required: [sessionId, productId, offerPrice]
+
+    NegotiationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [accepted, rejected, countered]
+        counterOffer:
+          type: number
+        finalPrice:
+          type: number
+        message:
+          type: string
+        roundsLeft:
+          type: integer
+      required: [status, message, roundsLeft]
+
+    SupportChatBody:
+      type: object
+      properties:
+        message:
+          type: string
+        sessionId:
+          type: string
+        orderId:
+          type: integer
+        conversationHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+              content:
+                type: string
+            required: [role, content]
+      required: [message, sessionId]
+
+    SupportChatResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        intent:
+          type: string
+        suggestedActions:
+          type: array
+          items:
+            type: string
+        escalate:
+          type: boolean
+      required: [response, intent, escalate]
+
+    InitiateReturnBody:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        sessionId:
+          type: string
+        reason:
+          type: string
+        items:
+          type: array
+          items:
+            type: integer
+      required: [orderId, sessionId, reason]
+
+    ReturnResponse:
+      type: object
+      properties:
+        returnId:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+        estimatedRefund:
+          type: number
+        instructions:
+          type: string
+      required: [returnId, status, message, instructions]
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+      required: [id, title]
+
+    CreateConversationBody:
+      type: object
+      properties:
+        title:
+          type: string
+      required: [title]
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        createdAt:
+          type: string
+      required: [id, conversationId, role, content]
+
+    SendOpenaiMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Handshake, X, Send, CheckCircle, AlertCircle } from "lucide-react";
+import { Handshake, X, Send, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
 import { useStartNegotiation, useMakeOffer } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/utils";
 

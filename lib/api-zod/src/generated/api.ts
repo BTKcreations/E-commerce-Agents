@@ -15,6 +15,43 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Register a new user
+ */
+export const PostAuthRegisterBody = zod.object({
+  name: zod.string(),
+  email: zod.string(),
+  password: zod.string(),
+});
+
+/**
+ * @summary Login
+ */
+export const PostAuthLoginBody = zod.object({
+  email: zod.string(),
+  password: zod.string(),
+});
+
+export const PostAuthLoginResponse = zod.object({
+  user: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    email: zod.string(),
+    role: zod.string(),
+  }),
+  token: zod.string(),
+});
+
+/**
+ * @summary Get current user
+ */
+export const GetAuthMeResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  email: zod.string(),
+  role: zod.string(),
+});
+
+/**
  * @summary List all products
  */
 export const ListProductsQueryParams = zod.object({
@@ -82,6 +119,50 @@ export const GetProductResponse = zod.object({
   tags: zod.array(zod.string()).optional(),
   demandScore: zod.number().optional(),
   createdAt: zod.string().optional(),
+});
+
+/**
+ * @summary Update a product
+ */
+export const UpdateProductParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateProductBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  price: zod.number().optional(),
+  category: zod.string().optional(),
+  brand: zod.string().optional(),
+  imageUrl: zod.string().optional(),
+  stock: zod.number().optional(),
+  specs: zod.record(zod.string(), zod.unknown()).optional(),
+  tags: zod.array(zod.string()).optional(),
+});
+
+export const UpdateProductResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().optional(),
+  price: zod.number(),
+  originalPrice: zod.number().optional(),
+  category: zod.string(),
+  brand: zod.string().optional(),
+  imageUrl: zod.string().optional(),
+  stock: zod.number(),
+  rating: zod.number(),
+  reviewCount: zod.number(),
+  specs: zod.record(zod.string(), zod.unknown()).optional(),
+  tags: zod.array(zod.string()).optional(),
+  demandScore: zod.number().optional(),
+  createdAt: zod.string().optional(),
+});
+
+/**
+ * @summary Delete a product
+ */
+export const DeleteProductParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**
@@ -200,6 +281,50 @@ export const AddToCartResponse = zod.object({
 });
 
 /**
+ * @summary Update cart item quantity
+ */
+export const UpdateCartItemParams = zod.object({
+  itemId: zod.coerce.number(),
+});
+
+export const UpdateCartItemBody = zod.object({
+  sessionId: zod.string(),
+  quantity: zod.number(),
+});
+
+export const UpdateCartItemResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      product: zod
+        .object({
+          id: zod.number(),
+          name: zod.string(),
+          description: zod.string().optional(),
+          price: zod.number(),
+          originalPrice: zod.number().optional(),
+          category: zod.string(),
+          brand: zod.string().optional(),
+          imageUrl: zod.string().optional(),
+          stock: zod.number(),
+          rating: zod.number(),
+          reviewCount: zod.number(),
+          specs: zod.record(zod.string(), zod.unknown()).optional(),
+          tags: zod.array(zod.string()).optional(),
+          demandScore: zod.number().optional(),
+          createdAt: zod.string().optional(),
+        })
+        .optional(),
+      quantity: zod.number(),
+      negotiatedPrice: zod.number().optional(),
+    }),
+  ),
+  total: zod.number(),
+  itemCount: zod.number(),
+});
+
+/**
  * @summary Remove item from cart
  */
 export const RemoveFromCartParams = zod.object({
@@ -252,6 +377,7 @@ export const ListOrdersQueryParams = zod.object({
 export const ListOrdersResponseItem = zod.object({
   id: zod.number(),
   sessionId: zod.string(),
+  userId: zod.number().optional(),
   status: zod.enum([
     "pending",
     "confirmed",
@@ -287,6 +413,7 @@ export const ListOrdersResponseItem = zod.object({
     }),
   ),
   total: zod.number(),
+  shippingAddress: zod.string().optional(),
   createdAt: zod.string().optional(),
 });
 export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
@@ -296,7 +423,9 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
  */
 export const CreateOrderBody = zod.object({
   sessionId: zod.string(),
+  userId: zod.number().optional(),
   shippingAddress: zod.string().optional(),
+  paymentMethod: zod.enum(["card", "upi", "cod"]).optional(),
 });
 
 /**
@@ -309,6 +438,7 @@ export const GetOrderParams = zod.object({
 export const GetOrderResponse = zod.object({
   id: zod.number(),
   sessionId: zod.string(),
+  userId: zod.number().optional(),
   status: zod.enum([
     "pending",
     "confirmed",
@@ -344,6 +474,7 @@ export const GetOrderResponse = zod.object({
     }),
   ),
   total: zod.number(),
+  shippingAddress: zod.string().optional(),
   createdAt: zod.string().optional(),
 });
 

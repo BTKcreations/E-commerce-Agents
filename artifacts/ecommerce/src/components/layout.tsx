@@ -1,20 +1,30 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, LayoutDashboard, Search, Sparkles, Menu, X, Package } from "lucide-react";
+import { ShoppingCart, LayoutDashboard, Search, Sparkles, Menu, X, Package, User, LogOut, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useGetCart } from "@workspace/api-client-react";
+import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { getSessionId } from "@/lib/session";
+import { useAuth } from "@/contexts/auth-context";
+
 import { motion, AnimatePresence } from "framer-motion";
+
 
 export function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, logout, isAdmin } = useAuth();
   
   const sessionId = getSessionId();
+
   const { data: cart } = useGetCart({ sessionId }, { 
-    query: { retry: false, refetchInterval: 5000 } 
+    query: { 
+      queryKey: getGetCartQueryKey({ sessionId }),
+      retry: false, 
+      refetchInterval: 5000 
+    } 
   });
+
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -26,8 +36,9 @@ export function Layout({ children }: { children: ReactNode }) {
     { href: "/", label: "Home" },
     { href: "/products", label: "Products" },
     { href: "/orders", label: "Orders" },
-    { href: "/dashboard", label: "AI Dashboard", icon: <Sparkles className="w-4 h-4 text-accent" /> },
+    ...(isAdmin ? [{ href: "/dashboard", label: "Shop Dashboard", icon: <LayoutDashboard className="w-4 h-4 text-accent" /> }] : []),
   ];
+
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -43,7 +54,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <Sparkles className="w-5 h-5" />
             </div>
             <span className="font-display font-bold text-xl tracking-tight text-foreground">
-              ShopSmart <span className="text-primary">AI</span>
+              ShopSmart
             </span>
           </Link>
 
@@ -78,8 +89,49 @@ export function Layout({ children }: { children: ReactNode }) {
               )}
             </Link>
             
+            <div className="hidden md:block h-6 w-px bg-border/50 mx-2" />
+
+            {user ? (
+              <div className="relative group">
+                <button className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-muted transition-all">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                    {user.name.charAt(0)}
+                  </div>
+                  <span className="text-sm font-bold max-w-[100px] truncate">{user.name}</span>
+                </button>
+                
+                <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all z-[60]">
+                  <div className="w-48 bg-card border border-border rounded-2xl shadow-xl p-2 space-y-1">
+                    <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Account</div>
+                    {user.role === 'admin' && (
+                      <Link href="/admin/products" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted text-sm font-medium transition-colors">
+                        <Settings className="w-4 h-4" />
+                        Management
+                      </Link>
+                    )}
+                    <button 
+                      onClick={logout}
+                      className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-destructive/10 hover:text-destructive text-sm font-medium transition-colors text-left"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Link 
+                href="/login" 
+                className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-foreground text-background font-bold rounded-xl hover:opacity-90 transition-all text-sm"
+              >
+                <User className="w-4 h-4" />
+                Sign In
+              </Link>
+            )}
+
             <button 
-              className="md:hidden p-2 text-foreground"
+               className="md:hidden p-2 text-foreground"
+
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X /> : <Menu />}
@@ -126,10 +178,10 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-primary" />
-              <span className="font-display font-bold text-xl">ShopSmart AI</span>
+              <span className="font-display font-bold text-xl">ShopSmart</span>
             </div>
             <p className="text-muted-foreground max-w-md">
-              The next generation of e-commerce. Powered by multiple AI agents that negotiate, recommend, and assist you in real-time.
+              The next generation of e-commerce. Focused on personalized service and real-time assistance.
             </p>
           </div>
           <div>
@@ -137,13 +189,14 @@ export function Layout({ children }: { children: ReactNode }) {
             <ul className="space-y-2 text-muted-foreground">
               <li><Link href="/products" className="hover:text-primary">Shop All</Link></li>
               <li><Link href="/orders" className="hover:text-primary">My Orders</Link></li>
-              <li><Link href="/dashboard" className="hover:text-primary">AI Dashboard</Link></li>
+              <li><Link href="/dashboard" className="hover:text-primary">Shop Dashboard</Link></li>
+              <li><Link href="/admin/products" className="hover:text-primary">Product Management</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="font-bold mb-4">Support</h4>
             <ul className="space-y-2 text-muted-foreground">
-              <li><Link href="/dashboard" className="hover:text-primary">Chat with AI Support</Link></li>
+              <li><Link href="/dashboard" className="hover:text-primary">Contact Support</Link></li>
               <li>Returns & Refunds</li>
               <li>Privacy Policy</li>
             </ul>

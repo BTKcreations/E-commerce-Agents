@@ -1,53 +1,100 @@
 import { Router, type IRouter } from "express";
-import { db, productsTable, negotiationsTable } from "@workspace/db";
-import { openai } from "@workspace/integrations-openai-ai-server";
-import { eq, and } from "drizzle-orm";
+import { db, productsTable, negotiationsTable, ordersTable } from "@workspace/db";
+import { openai, AI_MODEL } from "@workspace/integrations-openai-ai-server";
+import { eq, and, count } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 const MAX_ROUNDS = 3;
 
-router.post("/start", async (req, res) => {
+async function getNegotiationContext(sessionId: string) {
+  const [orderResult] = await db
+    .select({ value: count() })
+    .from(ordersTable)
+    .where(eq(ordersTable.sessionId, sessionId));
+  
+  const [negotiationResult] = await db
+    .select({ value: count() })
+    .from(negotiationsTable)
+    .where(and(eq(negotiationsTable.sessionId, sessionId), eq(negotiationsTable.status, "accepted")));
+
+  const orderCount = Number(orderResult?.value || 0);
+  const successfulNegotiations = Number(negotiationResult?.value || 0);
+
+  // Dynamic discount logic: 
+  // Base 10%
+  // +2% for every past order (max +10%)
+  // +1% for every past successful negotiation (max +5%)
+  const loyaltyBonus = Math.min(0.10, orderCount * 0.02);
+  const negotiationBonus = Math.min(0.05, successfulNegotiations * 0.01);
+  const maxDiscount = 0.10 + loyaltyBonus + negotiationBonus;
+
+  return {
+    orderCount,
+    successfulNegotiations,
+    maxDiscount,
+    isLoyal: orderCount > 0,
+  };
+}
+
+router.post("/start", async (req, res): Promise<any> => {
   try {
-    const { productId, sessionId, offerPrice } = req.body;
+    const { productId, sessionId, message } = req.body;
 
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
     if (!product) return res.status(404).json({ error: "Product not found" });
 
+    const context = await getNegotiationContext(sessionId);
     const originalPrice = Number(product.price);
+    const minPrice = originalPrice * (1 - context.maxDiscount);
 
-    const systemPrompt = `You are a negotiation AI for ShopSmart AI (Indian e-commerce).
-You represent the seller. Be reasonable but protect profit margins. The minimum acceptable price is ${(originalPrice * 0.8).toFixed(0)} (20% discount max).
-The buyer has made an initial offer. Respond ONLY with JSON:
+    console.log(`[Negotiation] Start - Session: ${sessionId}, Message: "${message}", Min Price: ₹${minPrice.toFixed(2)}`);
+
+    const systemPrompt = `You are a professional human sales manager at ShopSmart, a premium Indian e-commerce store.
+A customer is interested in the "${product.name}" (Original Price: ₹${originalPrice}).
+Your goal is to close the sale at the best possible price while keeping the customer happy.
+
+STRATEGY:
+- Be polite, professional, and use natural Indian English.
+- NEVER mention that you are an AI, a bot, or that there are "programmed limits". Act as a real person.
+- If the customer is loyal (Orders: ${context.orderCount}), acknowledge their past support warmly.
+- Your absolute bottom price is ₹${minPrice.toFixed(0)}. NEVER go below this.
+- Extract any numeric offer from the user's message. If they didn't offer a price, steer them towards one.
+
+EXTREMELY IMPORTANT: Respond ONLY with a JSON object. No other text.
 {
   "status": "accepted"|"rejected"|"countered",
-  "counterOffer": number (if countered),
-  "message": "friendly negotiation message in Indian English"
+  "counterOffer": number (your offer to them),
+  "userOffer": number (extracted from their message, or 0 if none),
+  "message": "your human-like response to the customer"
 }`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 256,
       messages: [
         { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `Product: ${product.name}, Original price: ₹${originalPrice}, Buyer's offer: ₹${offerPrice}`,
-        },
+        { role: "user", content: message },
       ],
     });
 
     const content = completion.choices[0]?.message?.content || "{}";
-    let parsed: { status?: string; counterOffer?: number; message?: string } = {};
+    let parsed: { status?: string; counterOffer?: number; userOffer?: number; message?: string } = {};
     try {
       parsed = JSON.parse(content);
     } catch {
       parsed = {
         status: "countered",
-        counterOffer: originalPrice * 0.9,
-        message: "I can offer a 10% discount. How does that sound?",
+        counterOffer: Math.round(originalPrice * 0.95),
+        userOffer: 0,
+        message: "I appreciate your interest! I can offer you a small discount to start. How does that sound?",
       };
     }
+
+    const initialHistory = [
+      { role: "user", content: message },
+      { role: "assistant", content: parsed.message || "Let's talk about the price." }
+    ];
 
     const [negotiation] = await db
       .insert(negotiationsTable)
@@ -55,19 +102,22 @@ The buyer has made an initial offer. Respond ONLY with JSON:
         sessionId,
         productId,
         originalPrice: String(originalPrice),
-        currentOffer: String(offerPrice),
+        currentOffer: String(parsed.counterOffer || originalPrice),
         status: parsed.status || "active",
         rounds: 1,
+        messageHistory: initialHistory,
       })
       .returning();
 
     res.json({
+      id: negotiation.id,
       sessionId,
       productId,
       originalPrice,
-      currentOffer: parsed.counterOffer || offerPrice,
+      currentOffer: parsed.counterOffer || originalPrice,
       status: parsed.status || "countered",
-      message: parsed.message || "Let's negotiate!",
+      message: parsed.message,
+      messageHistory: initialHistory,
       roundsLeft: MAX_ROUNDS - 1,
     });
   } catch (err) {
@@ -76,58 +126,102 @@ The buyer has made an initial offer. Respond ONLY with JSON:
   }
 });
 
-router.post("/offer", async (req, res) => {
+router.post("/offer", async (req, res): Promise<any> => {
   try {
-    const { sessionId, productId, offerPrice, previousOffer } = req.body;
+    const { id, sessionId, productId, message } = req.body;
 
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
     if (!product) return res.status(404).json({ error: "Product not found" });
 
-    const originalPrice = Number(product.price);
-    const minPrice = originalPrice * 0.75;
-    const roundsLeft = MAX_ROUNDS - 1;
+    let negotiation;
+    if (id) {
+       [negotiation] = await db.select().from(negotiationsTable).where(eq(negotiationsTable.id, id)).limit(1);
+    } else {
+       [negotiation] = await db
+        .select()
+        .from(negotiationsTable)
+        .where(and(eq(negotiationsTable.sessionId, sessionId), eq(negotiationsTable.productId, productId)))
+        .limit(1);
+    }
 
-    const systemPrompt = `You are a negotiation AI for ShopSmart AI (Indian e-commerce).
-You represent the seller. Minimum acceptable price: ₹${minPrice.toFixed(0)}.
-This is round ${MAX_ROUNDS - roundsLeft} of max ${MAX_ROUNDS} rounds.
-${roundsLeft <= 1 ? "This is the final round — either accept or reject." : ""}
-Respond ONLY with JSON:
+    if (!negotiation) return res.status(404).json({ error: "Negotiation session not found" });
+
+    console.log(`[Negotiation] Loaded History:`, JSON.stringify(negotiation.messageHistory, null, 2));
+
+    const context = await getNegotiationContext(sessionId);
+    const originalPrice = Number(product.price);
+    const minPrice = originalPrice * (1 - context.maxDiscount);
+    const roundsLeft = MAX_ROUNDS - negotiation.rounds;
+
+    console.log(`[Negotiation Offer] Session: ${sessionId}, Rounds Left: ${roundsLeft}, Message: "${message}"`);
+
+    const systemPrompt = `You are a human sales manager. A customer is bargaining for "${product.name}".
+Original Price: ₹${originalPrice}. Your bottom line: ₹${minPrice.toFixed(0)}.
+Rounds remaining: ${roundsLeft}.
+
+STRATEGY:
+- Be firm but fair. If this is the final round, make your best and final offer or accept/reject.
+- Extract any numeric offer from the user's message.
+- If they are being unreasonable, stand your ground politely.
+- NEVER reveal your bottom line or that you are an AI.
+
+EXTREMELY IMPORTANT: Respond ONLY with JSON.
 {
   "status": "accepted"|"rejected"|"countered",
-  "counterOffer": number (required if countered),
-  "finalPrice": number (required if accepted),
-  "message": "friendly message in Indian English"
+  "counterOffer": number (if countered),
+  "userOffer": number (extracted from their message, or 0 if none),
+  "finalPrice": number (if accepted),
+  "message": "your human-like response"
 }`;
 
+    const history = (negotiation.messageHistory || []) as any[];
+    const currentMessages = [
+      { role: "system", content: systemPrompt },
+      ...history,
+      { role: "user", content: message },
+    ];
+
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 256,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `Product: ${product.name}, Original: ₹${originalPrice}, Seller's last offer: ₹${previousOffer}, Buyer's new offer: ₹${offerPrice}`,
-        },
-      ],
+      messages: currentMessages as any,
     });
 
     const content = completion.choices[0]?.message?.content || "{}";
-    let parsed: { status?: string; counterOffer?: number; finalPrice?: number; message?: string } = {};
+    let parsed: { status?: string; counterOffer?: number; userOffer?: number; finalPrice?: number; message?: string } = {};
     try {
       parsed = JSON.parse(content);
     } catch {
       parsed = {
-        status: offerPrice >= minPrice ? "accepted" : "rejected",
-        finalPrice: offerPrice,
-        message: offerPrice >= minPrice ? "Deal! Great price for you." : "Sorry, this is too low.",
+        status: "countered",
+        counterOffer: Number(negotiation.currentOffer),
+        message: "I hear you, but let's stick to our previous discussion for now.",
       };
     }
 
+    const updatedHistory = [
+      ...history,
+      { role: "user", content: message },
+      { role: "assistant", content: parsed.message || "I see." }
+    ];
+
+    await db
+      .update(negotiationsTable)
+      .set({
+        currentOffer: String(parsed.counterOffer || negotiation.currentOffer),
+        status: parsed.status || "active",
+        rounds: negotiation.rounds + 1,
+        messageHistory: updatedHistory,
+        finalPrice: parsed.status === "accepted" ? String(parsed.finalPrice || parsed.userOffer || negotiation.currentOffer) : null,
+      })
+      .where(eq(negotiationsTable.id, negotiation.id));
+
     res.json({
-      status: parsed.status || "rejected",
+      status: parsed.status || "countered",
       counterOffer: parsed.counterOffer,
       finalPrice: parsed.finalPrice,
-      message: parsed.message || "Thank you for your offer.",
+      message: parsed.message,
+      messageHistory: updatedHistory,
       roundsLeft: Math.max(0, roundsLeft - 1),
     });
   } catch (err) {

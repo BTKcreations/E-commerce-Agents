@@ -91,4 +91,27 @@ router.delete("/:itemId", async (req, res) => {
   }
 });
 
+router.patch("/:itemId", async (req, res) => {
+  try {
+    const itemId = parseInt(req.params.itemId);
+    const { sessionId, quantity } = req.body;
+
+    if (quantity <= 0) {
+      await db
+        .delete(cartItemsTable)
+        .where(and(eq(cartItemsTable.id, itemId), eq(cartItemsTable.sessionId, sessionId)));
+    } else {
+      await db
+        .update(cartItemsTable)
+        .set({ quantity })
+        .where(and(eq(cartItemsTable.id, itemId), eq(cartItemsTable.sessionId, sessionId)));
+    }
+
+    const cart = await getCartWithProducts(sessionId);
+    res.json(cart);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update cart" });
+  }
+});
+
 export default router;

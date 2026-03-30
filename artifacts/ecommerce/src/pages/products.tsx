@@ -23,7 +23,7 @@ export function Products() {
     doChatSearch({ data: { query: searchQuery, sessionId } });
   };
 
-  const categories = ["All", "Electronics", "Clothing", "Home", "Sports"];
+  const categories = ["All", "Electronics", "Wearables", "Home Decor", "Audio", "Fitness", "Kitchen", "Office", "Clothing", "Sports"];
   
   const displayProducts = aiSearchResults ? aiSearchResults.products : standardProducts;
 
@@ -48,7 +48,7 @@ export function Products() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="block w-full pl-14 pr-32 py-5 rounded-2xl bg-background border-2 border-border text-lg focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all duration-300 shadow-sm"
-              placeholder="Ask our AI to find products..."
+              placeholder="Search for products..."
             />
             <button
               type="submit"
@@ -66,7 +66,7 @@ export function Products() {
               className="mt-6 max-w-2xl mx-auto p-4 bg-primary/10 rounded-xl border border-primary/20 flex items-start gap-3 text-primary-foreground dark:text-primary"
             >
               <Sparkles className="w-5 h-5 mt-0.5 shrink-0" />
-              <p><strong>AI Understanding:</strong> {aiSearchResults.interpretation}</p>
+              <p><strong>Search Interpretation:</strong> {aiSearchResults.interpretation}</p>
             </motion.div>
           )}
         </div>
@@ -110,7 +110,7 @@ export function Products() {
           <div className="flex-1">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold font-display">
-                {aiSearchResults ? "AI Results" : `${activeCategory} Products`}
+                {aiSearchResults ? "Search Results" : `${activeCategory} Products`}
                 <span className="text-muted-foreground text-base font-normal ml-2">
                   ({displayProducts?.length || 0})
                 </span>

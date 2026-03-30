@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
 import { db, ordersTable } from "@workspace/db";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { openai, AI_MODEL } from "@workspace/integrations-openai-ai-server";
 import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-const SUPPORT_SYSTEM_PROMPT = `You are a friendly and helpful customer support AI for ShopSmart AI, an Indian e-commerce platform.
+const SUPPORT_SYSTEM_PROMPT = `You are a friendly and helpful customer support specialist for ShopSmart, an Indian e-commerce platform.
 You help customers with:
 - Order tracking and status
 - Returns and refunds
@@ -22,7 +22,8 @@ Respond ONLY with JSON:
   "intent": "order_tracking"|"return_request"|"product_query"|"payment_issue"|"general_faq"|"complaint",
   "suggestedActions": ["action1", "action2"],
   "escalate": boolean (true only if genuinely complex issue)
-}`;
+}
+`;
 
 router.post("/chat", async (req, res) => {
   try {
@@ -47,7 +48,7 @@ router.post("/chat", async (req, res) => {
     messages.push({ role: "user", content: message });
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 512,
       messages,
     });

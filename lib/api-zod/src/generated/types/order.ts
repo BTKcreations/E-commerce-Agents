@@ -11,8 +11,10 @@ import type { OrderStatus } from "./orderStatus";
 export interface Order {
   id: number;
   sessionId: string;
+  userId?: number;
   status: OrderStatus;
   items: CartItem[];
   total: number;
+  shippingAddress?: string;
   createdAt?: string;
 }

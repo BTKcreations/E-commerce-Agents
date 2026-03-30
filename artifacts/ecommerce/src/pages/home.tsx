@@ -24,9 +24,9 @@ export function Home() {
   }, [sessionId, getRecs]);
 
   const features = [
-    { icon: <Zap className="w-6 h-6 text-accent" />, title: "Dynamic Pricing", desc: "AI adjusts prices in real-time based on market demand." },
-    { icon: <Sparkles className="w-6 h-6 text-primary" />, title: "Negotiation AI", desc: "Haggle with our smart agents to get the best deal." },
-    { icon: <ShieldCheck className="w-6 h-6 text-green-500" />, title: "Smart Q&A", desc: "Ask complex product questions and get instant verified answers." },
+    { icon: <Zap className="w-6 h-6 text-accent" />, title: "Dynamic Pricing", desc: "We adjust prices in real-time based on market demand." },
+    { icon: <Sparkles className="w-6 h-6 text-primary" />, title: "Negotiation Manager", desc: "Message our managers to get the best deal." },
+    { icon: <ShieldCheck className="w-6 h-6 text-green-500" />, title: "Product Q&A", desc: "Ask complex product questions and get instant verified answers." },
     { icon: <Clock className="w-6 h-6 text-blue-500" />, title: "Predictive Stock", desc: "Our forecasting ensures your favorite items are never out of stock." },
   ];
 
@@ -51,13 +51,13 @@ export function Home() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-medium mb-6 border border-primary/20">
               <Sparkles className="w-4 h-4" />
-              <span>Powered by 5 Autonomous AI Agents</span>
+              <span>Personalized Service & Real-time Assistance</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-display font-extrabold text-foreground mb-6 max-w-4xl mx-auto leading-tight">
               The Future of <span className="text-gradient-primary">E-Commerce</span> is Here.
             </h1>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Experience dynamic pricing, AI-driven recommendations, and haggle directly with our negotiation bot.
+              Experience dynamic pricing, personalized recommendations, and message our manager directly for a better deal.
             </p>
             <div className="flex items-center justify-center gap-4">
               <Link 
@@ -70,7 +70,7 @@ export function Home() {
                 href="/dashboard" 
                 className="px-8 py-4 rounded-xl bg-card text-foreground border border-border font-bold text-lg hover:bg-muted hover:shadow-lg transition-all duration-300 flex items-center gap-2"
               >
-                View Agent Dashboard
+                View Shop Dashboard
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
@@ -129,7 +129,7 @@ export function Home() {
           <div className="flex items-end justify-between mb-10">
             <div>
               <h2 className="text-3xl font-bold font-display mb-2">Trending Now</h2>
-              <p className="text-muted-foreground">High demand products identified by our Pricing Agent</p>
+              <p className="text-muted-foreground">High demand products identified by our specialists</p>
             </div>
             <Link href="/products" className="text-primary font-semibold hover:underline flex items-center gap-1">
               View All <ArrowRight className="w-4 h-4" />
@@ -144,7 +144,7 @@ export function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {popularProducts?.slice(0, 8).map((product: any, i: number) => (
+              {popularProducts?.slice(0, 8)?.map((product: any, i: number) => (
                 <ProductCard key={product.id} product={product} index={i} />
               ))}
             </div>

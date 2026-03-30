@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, productsTable, reviewsTable } from "@workspace/db";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { openai, AI_MODEL } from "@workspace/integrations-openai-ai-server";
 import { eq, like, and, gte, lte } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -14,7 +14,7 @@ router.post("/ask", async (req, res) => {
 
     const reviews = await db.select().from(reviewsTable).where(eq(reviewsTable.productId, productId));
 
-    const systemPrompt = `You are a knowledgeable product expert AI for ShopSmart AI (Indian e-commerce).
+    const systemPrompt = `You are a knowledgeable product specialist for ShopSmart (Indian e-commerce).
 Answer customer questions about products in a helpful, human-like way.
 Respond ONLY with JSON:
 {
@@ -34,7 +34,7 @@ Rating: ${product.rating}/5 (${product.reviewCount} reviews)
 Reviews: ${reviews.slice(0, 5).map((r) => `[${r.rating}/5] ${r.body}`).join("\n")}`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 1024,
       messages: [
         { role: "system", content: systemPrompt },
@@ -73,7 +73,7 @@ router.post("/search", async (req, res) => {
 
     const allProducts = await db.select().from(productsTable);
 
-    const systemPrompt = `You are a natural language search AI for ShopSmart AI (Indian e-commerce).
+    const systemPrompt = `You are a natural language search specialist for ShopSmart (Indian e-commerce).
 Parse the user's query and find matching products. The prices are in Indian Rupees (₹).
 Respond ONLY with JSON:
 {
@@ -91,7 +91,7 @@ Respond ONLY with JSON:
     }));
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 512,
       messages: [
         { role: "system", content: systemPrompt },

@@ -1,6 +1,6 @@
-import { Link } from "wouter";
-import { Trash2, ArrowRight, ShoppingBag, ShieldCheck } from "lucide-react";
-import { useGetCart, useRemoveFromCart, useCreateOrder } from "@workspace/api-client-react";
+import { Link, useLocation } from "wouter";
+import { Trash2, ArrowRight, ShoppingBag, ShieldCheck, Minus, Plus } from "lucide-react";
+import { useGetCart, useRemoveFromCart, useCreateOrder, useUpdateCartItem } from "@workspace/api-client-react";
 import { getSessionId } from "@/lib/session";
 import { Layout } from "@/components/layout";
 import { formatPrice } from "@/lib/utils";
@@ -8,8 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 
 export function Cart() {
   const sessionId = getSessionId();
+  const [, setLocation] = useLocation();
   const { data: cart, isLoading, refetch } = useGetCart({ sessionId });
+
   const { mutate: remove, isPending: isRemoving } = useRemoveFromCart();
+  const { mutate: update, isPending: isUpdating } = useUpdateCartItem();
   const { mutate: createOrder, isPending: isOrdering } = useCreateOrder();
   const { toast } = useToast();
 
@@ -19,19 +22,19 @@ export function Cart() {
     });
   };
 
-  const handleCheckout = () => {
-    createOrder({
-      data: { sessionId, shippingAddress: "123 Tech Park, Bangalore, India" }
+  const handleUpdateQuantity = (itemId: number, newQuantity: number) => {
+    update({ 
+      itemId, 
+      data: { sessionId, quantity: newQuantity } 
     }, {
-      onSuccess: () => {
-        toast({
-          title: "Order Placed Successfully!",
-          description: "Your AI-assisted order has been processed.",
-        });
-        window.location.href = "/orders";
-      }
+      onSuccess: () => refetch()
     });
   };
+
+  const handleCheckout = () => {
+    setLocation("/checkout");
+  };
+
 
   return (
     <Layout>
@@ -57,7 +60,24 @@ export function Cart() {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-lg mb-1">{item.product?.name}</h3>
-                    <div className="text-sm text-muted-foreground mb-2">Quantity: {item.quantity}</div>
+                    
+                    <div className="flex items-center gap-3 mb-4">
+                      <button 
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                        disabled={isUpdating}
+                        className="p-1 hover:bg-muted rounded-md transition-colors border border-border"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="font-bold w-4 text-center">{item.quantity}</span>
+                      <button 
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                        disabled={isUpdating}
+                        className="p-1 hover:bg-muted rounded-md transition-colors border border-border"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
                     
                     <div className="flex items-center gap-4">
                       {item.negotiatedPrice ? (

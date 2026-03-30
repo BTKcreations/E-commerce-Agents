@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, productsTable } from "@workspace/db";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { openai, AI_MODEL } from "@workspace/integrations-openai-ai-server";
 import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -17,7 +17,7 @@ router.get("/forecast", async (req, res) => {
     const stock = product.stock;
     const demandScore = product.demandScore || 0.5;
 
-    const systemPrompt = `You are a dynamic pricing and demand forecasting AI for ShopSmart AI (Indian e-commerce).
+    const systemPrompt = `You are a dynamic pricing and demand forecasting specialist for ShopSmart (Indian e-commerce).
 Analyze the product and generate a forecast. Respond ONLY with JSON:
 {
   "suggestedPrice": number,
@@ -42,7 +42,7 @@ Festival season: ${isFestival}
 Rating: ${product.rating}`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 512,
       messages: [
         { role: "system", content: systemPrompt },
@@ -86,12 +86,12 @@ router.post("/adjust", async (req, res) => {
     const oldPrice = Number(product.price);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 256,
       messages: [
         {
           role: "system",
-          content: `You are a pricing AI for an Indian e-commerce platform. Suggest a new price based on the context.
+          content: `You are a pricing specialist for an Indian e-commerce platform. Suggest a new price based on the context.
 Respond ONLY with JSON: { "newPrice": number, "reason": "explanation", "changePercent": number }`,
         },
         {
@@ -119,7 +119,7 @@ Respond ONLY with JSON: { "newPrice": number, "reason": "explanation", "changePe
       productId,
       oldPrice,
       newPrice,
-      reason: parsed.reason || "AI adjustment",
+      reason: parsed.reason || "Dynamic adjustment",
       changePercent: parsed.changePercent || 0,
     });
   } catch (err) {

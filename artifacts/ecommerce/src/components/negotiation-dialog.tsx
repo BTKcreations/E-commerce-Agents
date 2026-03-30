@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Handshake, X, Send, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
 import { useStartNegotiation, useMakeOffer } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/utils";
@@ -25,7 +25,9 @@ export function NegotiationDialog({
 }: NegotiationDialogProps) {
   const [offerInput, setOfferInput] = useState("");
   const [session, setSession] = useState<any>(null);
+  const [messages, setMessages] = useState<Array<{role: 'user'|'assistant', content: string}>>([]);
   const [round, setRound] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const { mutate: startNeg, isPending: isStarting } = useStartNegotiation();
   const { mutate: makeOffer, isPending: isOffering } = useMakeOffer();
@@ -33,45 +35,57 @@ export function NegotiationDialog({
   const isLoading = isStarting || isOffering;
   const maxRounds = 3;
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
   const handleClose = () => {
-    // Reset all state when closing so next open is fresh
     setOfferInput("");
     setSession(null);
+    setMessages([]);
     setRound(0);
     onClose();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const val = Number(offerInput);
-    if (!val || isNaN(val) || val <= 0) return;
+    if (!offerInput.trim()) return;
 
+    const userMessage = offerInput.trim();
     setOfferInput("");
+    
+    // Add user message to local state immediately for responsiveness
+    const newMessages = [...messages, { role: 'user' as const, content: userMessage }];
+    setMessages(newMessages);
 
     if (round === 0) {
-      // First offer → start a new negotiation session
       startNeg(
-        { data: { productId, sessionId, offerPrice: val } },
+        { data: { productId, sessionId, message: userMessage } },
         {
           onSuccess: (data) => {
+            console.log("Negotiation Started Success:", data);
             setSession(data);
+            setMessages((data.messageHistory as any) || []);
             setRound(1);
           },
         }
       );
     } else {
-      // Subsequent rounds → counter-offer
+      console.log("Making Offer for ID:", session?.id);
       makeOffer(
         {
           data: {
+            id: session?.id,
             sessionId,
             productId,
-            offerPrice: val,
-            previousOffer: session?.currentOffer,
-          },
+            message: userMessage,
+          } as any,
         },
         {
           onSuccess: (data) => {
+            console.log("Offer Response Success:", data);
             setSession((prev: any) => ({
               ...prev,
               status: data.status,
@@ -79,13 +93,14 @@ export function NegotiationDialog({
               currentOffer: data.counterOffer ?? prev?.currentOffer,
               roundsLeft: data.roundsLeft,
             }));
+            setMessages((data.messageHistory as any) || []);
             setRound((r) => r + 1);
 
             if (data.status === "accepted" && data.finalPrice) {
               setTimeout(() => {
                 onSuccess(data.finalPrice!);
                 handleClose();
-              }, 2500);
+              }, 3000);
             }
           },
         }
@@ -115,14 +130,14 @@ export function NegotiationDialog({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-lg bg-card rounded-3xl shadow-2xl border border-border overflow-hidden"
+        className="relative w-full max-w-xl bg-card rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col h-[600px]"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary to-accent p-6 text-white flex justify-between items-start">
+        <div className="bg-gradient-to-r from-primary to-accent p-6 text-white flex justify-between items-start shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Handshake className="w-6 h-6" />
-              <h2 className="font-bold text-2xl">Haggle with AI</h2>
+              <h2 className="font-bold text-2xl">Negotiation Manager</h2>
             </div>
             <p className="text-white/80 text-sm">Negotiating: {productName}</p>
           </div>
@@ -134,102 +149,137 @@ export function NegotiationDialog({
           </button>
         </div>
 
-        {/* Price Display */}
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6 p-4 bg-muted rounded-xl">
+        {/* Current Offer Status Strip */}
+        <div className="bg-muted/50 border-b border-border px-6 py-3 flex justify-between items-center shrink-0">
+          <div className="flex gap-4">
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Original Price</p>
-              <p className="text-xl font-bold line-through opacity-50">{formatPrice(originalPrice)}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Original</p>
+              <p className="text-sm font-bold opacity-50">{formatPrice(originalPrice)}</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
-                {aiCurrentOffer ? "AI's Counter Offer" : "Max Discount"}
-              </p>
-              <p className="text-2xl font-bold text-primary">
-                {aiCurrentOffer
-                  ? formatPrice(aiCurrentOffer)
-                  : formatPrice(Math.round(originalPrice * 0.8))}
-              </p>
-            </div>
-          </div>
-
-          {/* AI Message / Status */}
-          <div className="mb-6 min-h-[80px] flex items-center justify-center text-center px-4">
-            {isLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <span>AI is evaluating your offer...</span>
-              </div>
-            ) : session?.status === "accepted" ? (
-              <div className="text-green-500 flex flex-col items-center gap-2">
-                <CheckCircle className="w-8 h-8" />
-                <span className="font-bold text-lg">{session.message}</span>
-                <span className="text-sm text-foreground">Adding to your cart...</span>
-              </div>
-            ) : session?.status === "rejected" ? (
-              <div className="text-destructive flex flex-col items-center gap-2">
-                <AlertCircle className="w-8 h-8" />
-                <span className="font-bold text-lg">{session.message}</span>
-                <button
-                  onClick={handleClose}
-                  className="mt-2 text-sm text-muted-foreground underline hover:text-foreground"
-                >
-                  Buy at original price instead
-                </button>
-              </div>
-            ) : session?.message ? (
-              <div className="text-foreground italic text-base">
-                "{session.message}"
-              </div>
-            ) : (
-              <div className="text-muted-foreground text-sm">
-                <p className="font-medium text-foreground mb-1">Make your first offer!</p>
-                <p>The AI will negotiate with you. You can get up to 20% off.</p>
+            {aiCurrentOffer && (
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Current Offer</p>
+                <p className="text-sm font-bold text-primary">{formatPrice(aiCurrentOffer)}</p>
               </div>
             )}
           </div>
-
-          {/* Offer Input */}
-          {!isDone && (
-            <form onSubmit={handleSubmit}>
-              <div className="flex items-center justify-between mb-2 text-sm text-muted-foreground">
-                <span>{round === 0 ? "Your Opening Offer" : "Your Counter Offer"}</span>
-                {round > 0 && (
-                  <span className="font-medium">
-                    {roundsLeft} round{roundsLeft !== 1 ? "s" : ""} left
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
-                    ₹
-                  </span>
-                  <input
-                    type="number"
-                    value={offerInput}
-                    onChange={(e) => setOfferInput(e.target.value)}
-                    placeholder={`Max ${(originalPrice * 0.8).toFixed(0)}...`}
-                    className="w-full pl-8 pr-4 py-4 rounded-xl bg-background border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none text-lg font-bold transition-all"
-                    disabled={isLoading}
-                    min={1}
-                    max={originalPrice}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isLoading || !offerInput}
-                  className="px-6 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-colors whitespace-nowrap"
-                >
-                  {round === 0 ? "Start" : "Offer"} <Send className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Hint: Offer around {formatPrice(Math.round(originalPrice * 0.85))} for a good chance of success
-              </p>
-            </form>
+          {round > 0 && !isDone && (
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-background/50 px-2 py-1 rounded-md border border-border">
+              {roundsLeft} round{roundsLeft !== 1 ? "s" : ""} left
+            </div>
           )}
         </div>
+
+        {/* Chat Area */}
+        <div 
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto p-6 space-y-4 bg-muted/20 scroll-smooth"
+        >
+          <AnimatePresence initial={false}>
+            {messages.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="h-full flex flex-col items-center justify-center text-center p-8"
+              >
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Handshake className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Ready to negotiate?</h3>
+                <p className="text-muted-foreground text-sm max-w-xs">
+                  The manager is waiting for your best offer. Mention a price or ask for a discount to start the conversation.
+                </p>
+              </motion.div>
+            ) : (
+              messages.map((msg, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20, y: 10 }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                <div 
+                  className={`max-w-[85%] px-4 py-3 rounded-2xl shadow-sm ${
+                    msg.role === 'user' 
+                      ? 'bg-primary text-primary-foreground rounded-tr-sm' 
+                      : 'bg-card border border-border rounded-tl-sm'
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                </div>
+              </motion.div>
+            ))
+          )}
+          </AnimatePresence>
+          {isLoading && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="flex justify-start"
+            >
+              <div className="bg-card border border-border px-4 py-3 rounded-2xl rounded-tl-sm flex gap-1">
+                <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" />
+                <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.2s]" />
+                <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.4s]" />
+              </div>
+            </motion.div>
+          )}
+
+          {session?.status === "accepted" && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              className="px-4 py-8 bg-green-500/10 border border-green-500/20 rounded-2xl text-center flex flex-col items-center gap-3"
+            >
+              <CheckCircle className="w-10 h-10 text-green-500" />
+              <div>
+                <p className="font-bold text-green-600 text-lg">Offer Accepted!</p>
+                <p className="text-sm text-green-600/80">Updating your cart with the new price...</p>
+              </div>
+            </motion.div>
+          )}
+
+          {session?.status === "rejected" && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              className="px-4 py-8 bg-destructive/10 border border-destructive/20 rounded-2xl text-center flex flex-col items-center gap-3"
+            >
+              <AlertCircle className="w-10 h-10 text-destructive" />
+              <div>
+                <p className="font-bold text-destructive text-lg">Negotiation Ended</p>
+                <p className="text-sm text-destructive/80">The manager couldn't agree to that price.</p>
+                <button 
+                  onClick={handleClose}
+                  className="mt-4 px-4 py-2 bg-background border border-border rounded-lg text-sm font-semibold hover:bg-muted transition-colors"
+                >
+                  Close & Buy at Original Price
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Chat Input */}
+        {!isDone && (
+          <div className="p-4 bg-background border-t border-border shrink-0">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <input
+                type="text"
+                autoFocus
+                value={offerInput}
+                onChange={(e) => setOfferInput(e.target.value)}
+                placeholder="Type your offer or message..."
+                className="flex-1 px-4 py-3 rounded-xl bg-muted border-2 border-transparent focus:border-primary focus:bg-background outline-none transition-all"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !offerInput.trim()}
+                className="w-12 h-12 bg-primary text-primary-foreground rounded-xl flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                title="Send Message"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </form>
+          </div>
+        )}
       </motion.div>
     </div>
   );

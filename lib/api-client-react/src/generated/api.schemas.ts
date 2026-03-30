@@ -47,6 +47,20 @@ export interface CreateProductBody {
   tags?: string[];
 }
 
+export type UpdateProductBodySpecs = { [key: string]: unknown };
+
+export interface UpdateProductBody {
+  name?: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  brand?: string;
+  imageUrl?: string;
+  stock?: number;
+  specs?: UpdateProductBodySpecs;
+  tags?: string[];
+}
+
 export interface Review {
   id: number;
   productId: number;
@@ -98,15 +112,28 @@ export const OrderStatus = {
 export interface Order {
   id: number;
   sessionId: string;
+  userId?: number;
   status: OrderStatus;
   items: CartItem[];
   total: number;
+  shippingAddress?: string;
   createdAt?: string;
 }
 
+export type CreateOrderBodyPaymentMethod =
+  (typeof CreateOrderBodyPaymentMethod)[keyof typeof CreateOrderBodyPaymentMethod];
+
+export const CreateOrderBodyPaymentMethod = {
+  card: "card",
+  upi: "upi",
+  cod: "cod",
+} as const;
+
 export interface CreateOrderBody {
   sessionId: string;
+  userId?: number;
   shippingAddress?: string;
+  paymentMethod?: CreateOrderBodyPaymentMethod;
 }
 
 export interface RecommendationsRequestBody {
@@ -321,6 +348,29 @@ export interface SendOpenaiMessageBody {
   content: string;
 }
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface RegisterBody {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginBody {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
 export type ListProductsParams = {
   category?: string;
   search?: string;
@@ -341,6 +391,11 @@ export const ListProductsSortBy = {
 
 export type GetCartParams = {
   sessionId: string;
+};
+
+export type UpdateCartItemBody = {
+  sessionId: string;
+  quantity: number;
 };
 
 export type RemoveFromCartParams = {

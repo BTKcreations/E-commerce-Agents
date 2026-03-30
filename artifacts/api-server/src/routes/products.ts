@@ -113,4 +113,34 @@ router.post("/:id/reviews", async (req, res) => {
   }
 });
 
+router.patch("/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const body = req.body;
+    const [updated] = await db
+      .update(productsTable)
+      .set({
+        ...body,
+        price: body.price ? String(body.price) : undefined,
+      })
+      .where(eq(productsTable.id, id))
+      .returning();
+    
+    if (!updated) return res.status(404).json({ error: "Product not found" });
+    res.json({ ...updated, price: Number(updated.price) });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update product" });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(productsTable).where(eq(productsTable.id, id));
+    res.status(204).end();
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete product" });
+  }
+});
+
 export default router;

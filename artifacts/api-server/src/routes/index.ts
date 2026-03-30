@@ -9,6 +9,7 @@ import qa from "./qa";
 import negotiation from "./negotiation";
 import support from "./support";
 import openaiRoutes from "./openai-routes";
+import auth from "./auth";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,7 @@ router.use("/qa", qa);
 router.use("/negotiation", negotiation);
 router.use("/support", support);
 router.use("/openai", openaiRoutes);
+router.use("/auth", auth);
+
 
 export default router;

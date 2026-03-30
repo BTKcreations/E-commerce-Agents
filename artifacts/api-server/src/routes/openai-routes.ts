@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, conversations as conversationsTable, messages as messagesTable } from "@workspace/db";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { openai, AI_MODEL } from "@workspace/integrations-openai-ai-server";
 import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -50,7 +50,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
     const chatMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       {
         role: "system",
-        content: "You are a helpful AI assistant for ShopSmart AI, an Indian e-commerce platform. Help users with shopping, product queries, and general questions.",
+        content: "You are a helpful specialist for ShopSmart, an Indian e-commerce platform. Help users with shopping, product queries, and general questions.",
       },
       ...history.slice(-10).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
       { role: "user", content },
@@ -58,7 +58,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
     let fullResponse = "";
     const stream = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 1024,
       messages: chatMessages,
       stream: true,

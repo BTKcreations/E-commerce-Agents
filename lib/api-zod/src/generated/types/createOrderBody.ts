@@ -5,8 +5,11 @@
  * AI-powered E-Commerce Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateOrderBodyPaymentMethod } from "./createOrderBodyPaymentMethod";
 
 export interface CreateOrderBody {
   sessionId: string;
+  userId?: number;
   shippingAddress?: string;
+  paymentMethod?: CreateOrderBodyPaymentMethod;
 }

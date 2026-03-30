@@ -19,7 +19,7 @@ export function Dashboard() {
   // Support Chat State
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<Array<{role: 'user'|'assistant', content: string}>>([
-    { role: 'assistant', content: "Hello! I'm your AI Support Agent. How can I assist you with your orders or returns today?" }
+    { role: 'assistant', content: "Hello! I'm your Support Specialist. How can I assist you with your orders or returns today?" }
   ]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const { mutate: sendChat, isPending: isChatting } = useSupportChat();
@@ -57,8 +57,8 @@ export function Dashboard() {
             <BrainCircuit className="w-10 h-10 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-4xl font-display font-bold">Agent Control Center</h1>
-            <p className="text-muted opacity-80 text-lg mt-1">Monitor the autonomous AI agents powering your store</p>
+            <h1 className="text-4xl font-display font-bold">Shop Management Center</h1>
+            <p className="text-muted opacity-80 text-lg mt-1">Monitor the live activity powering your store</p>
           </div>
         </div>
       </div>
@@ -121,9 +121,9 @@ export function Dashboard() {
             
             <div className="flex-1 flex flex-col justify-center items-center text-center p-8 border-2 border-dashed border-border rounded-2xl">
               <BrainCircuit className="w-12 h-12 text-muted-foreground opacity-30 mb-4" />
-              <p className="font-bold text-lg">Agent is actively monitoring</p>
+              <p className="font-bold text-lg">Management is actively monitoring</p>
               <p className="text-muted-foreground max-w-xs mt-2">
-                Haggle sessions started by users will appear here. The AI autonomously negotiates within optimal margin parameters.
+                Negotiation sessions started by users will appear here. The manager handles offers within optimal margin parameters.
               </p>
             </div>
           </motion.div>
@@ -139,7 +139,7 @@ export function Dashboard() {
                   <HeadphonesIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold font-display">Customer Support AI</h2>
+                  <h2 className="text-xl font-bold font-display">Customer Support Specialist</h2>
                   <p className="text-sm text-green-500 font-medium flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse" /> Online
                   </p>

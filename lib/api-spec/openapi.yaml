@@ -41,7 +41,56 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterBody'
+      responses:
+        201:
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/login:
+    post:
+      summary: Login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginBody'
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/me:
+    get:
+      summary: Get current user
+      tags: [Auth]
+      responses:
+        200:
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
   /products:
+
     get:
       operationId: listProducts
       tags: [products]
@@ -119,6 +168,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
 
   /products/{id}/reviews:
     get:
@@ -201,6 +290,35 @@ paths:
                 $ref: "#/components/schemas/Cart"
 
   /cart/{itemId}:
+    patch:
+      operationId: updateCartItem
+      tags: [cart]
+      summary: Update cart item quantity
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessionId:
+                  type: string
+                quantity:
+                  type: integer
+              required: [sessionId, quantity]
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
     delete:
       operationId: removeFromCart
       tags: [cart]
@@ -623,6 +741,31 @@ components:
             type: string
       required: [name, price, category, stock]
 
+    UpdateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        category:
+          type: string
+        brand:
+          type: string
+        imageUrl:
+          type: string
+        stock:
+          type: integer
+        specs:
+          type: object
+          additionalProperties: true
+        tags:
+          type: array
+          items:
+            type: string
+
     Review:
       type: object
       properties:
@@ -703,6 +846,8 @@ components:
           type: integer
         sessionId:
           type: string
+        userId:
+          type: integer
         status:
           type: string
           enum: [pending, confirmed, shipped, delivered, cancelled]
@@ -712,18 +857,28 @@ components:
             $ref: "#/components/schemas/CartItem"
         total:
           type: number
+        shippingAddress:
+          type: string
         createdAt:
           type: string
       required: [id, sessionId, status, items, total]
+
+
 
     CreateOrderBody:
       type: object
       properties:
         sessionId:
           type: string
+        userId:
+          type: integer
         shippingAddress:
           type: string
+        paymentMethod:
+          type: string
+          enum: [card, upi, cod]
       required: [sessionId]
+
 
     RecommendationsRequestBody:
       type: object
@@ -1033,3 +1188,46 @@ components:
         content:
           type: string
       required: [content]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+      required: [id, name, email, role]
+
+    RegisterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+      required: [name, email, password]
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+      required: [user, token]
+

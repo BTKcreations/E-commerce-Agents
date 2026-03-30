@@ -9,15 +9,16 @@ router.get("/", async (req, res) => {
     const sessionId = req.query.sessionId as string;
     if (!sessionId) return res.status(400).json({ error: "sessionId required" });
     const orders = await db.select().from(ordersTable).where(eq(ordersTable.sessionId, sessionId));
-    res.json(orders.map((o) => ({ ...o, total: Number(o.total) })));
+    return res.json(orders.map((o) => ({ ...o, total: Number(o.total) })));
   } catch (err) {
-    res.status(500).json({ error: "Failed to list orders" });
+    return res.status(500).json({ error: "Failed to list orders" });
   }
 });
 
+
 router.post("/", async (req, res) => {
   try {
-    const { sessionId, shippingAddress } = req.body;
+    const { sessionId, shippingAddress, userId, paymentMethod } = req.body;
     if (!sessionId) return res.status(400).json({ error: "sessionId required" });
 
     const cartItems = await db
@@ -43,31 +44,38 @@ router.post("/", async (req, res) => {
       .insert(ordersTable)
       .values({
         sessionId,
+        userId: userId || null,
         status: "confirmed",
-        items: JSON.stringify(itemsWithProducts),
+        items: itemsWithProducts,
         total: String(total),
-        shippingAddress,
+        shippingAddress: shippingAddress || "Manual Pickup",
+        // paymentMethod is currently not in our DB schema, but we'll log it for now
       })
       .returning();
 
+    console.log(`Order ${order.id} placed with payment method: ${paymentMethod || "standard"}`);
+
     await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
 
-    res.status(201).json({ ...order, total: Number(order.total) });
+    return res.status(201).json({ ...order, total: Number(order.total) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to create order" });
+    return res.status(500).json({ error: "Failed to create order" });
   }
 });
+
+
 
 router.get("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
     if (!order) return res.status(404).json({ error: "Order not found" });
-    res.json({ ...order, total: Number(order.total) });
+    return res.json({ ...order, total: Number(order.total) });
   } catch (err) {
-    res.status(500).json({ error: "Failed to get order" });
+    return res.status(500).json({ error: "Failed to get order" });
   }
 });
+
 
 export default router;

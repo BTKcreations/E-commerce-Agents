@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, productsTable } from "@workspace/db";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { openai, AI_MODEL } from "@workspace/integrations-openai-ai-server";
 import { ne, eq } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -31,7 +31,7 @@ Previously viewed product IDs: ${viewedProducts.join(", ") || "none"}
 Available products: ${JSON.stringify(contextProducts)}`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_MODEL,
       max_completion_tokens: 512,
       messages: [
         { role: "system", content: systemPrompt },

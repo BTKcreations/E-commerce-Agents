@@ -53,11 +53,11 @@ export function Home() {
               <Sparkles className="w-4 h-4" />
               <span>Personalized Service & Real-time Assistance</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-display font-extrabold text-foreground mb-6 max-w-4xl mx-auto leading-tight">
-              The Future of <span className="text-gradient-primary">E-Commerce</span> is Here.
+            <h1 className="text-5xl md:text-7xl font-display font-extrabold text-foreground mb-6 max-w-4xl mx-auto leading-tight italic">
+              “Smart Agents, Smarter Buys.”
             </h1>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Experience dynamic pricing, personalized recommendations, and message our manager directly for a better deal.
+              Experience dynamic pricing, personalized recommendations, and AI-driven automation for a seamless shopping experience.
             </p>
             <div className="flex items-center justify-center gap-4">
               <Link 

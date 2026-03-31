@@ -26,7 +26,7 @@ export function RegisterPage() {
       onSuccess: (data: any) => {
         login(data.user, data.token);
         toast({
-          title: "Welcome to ShopSmart!",
+          title: "Welcome to omnexa!",
           description: `Account created for ${data.user.name}`,
         });
         setLocation("/");

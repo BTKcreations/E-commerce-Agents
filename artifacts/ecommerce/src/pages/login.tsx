@@ -57,7 +57,7 @@ export function LoginPage() {
               <LogIn className="w-8 h-8 text-primary" />
             </div>
             <h2 className="text-4xl font-display font-bold text-foreground">Sign In</h2>
-            <p className="mt-2 text-muted-foreground italic">Welcome back to ShopSmart</p>
+            <p className="mt-2 text-muted-foreground italic">Welcome back to omnexa</p>
           </div>
 
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

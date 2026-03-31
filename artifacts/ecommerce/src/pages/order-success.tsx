@@ -31,7 +31,7 @@ export function OrderSuccessPage() {
     const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
     
     doc.setFontSize(22);
-    doc.text("INVOICE - ShopSmart", 20, 20);
+    doc.text("INVOICE - omnexa", 20, 20);
     
     doc.setFontSize(12);
     doc.text(`Order ID: #${order.id}`, 20, 40);
@@ -122,7 +122,7 @@ export function OrderSuccessPage() {
                   <p className="text-muted-foreground">Invoice No: INV-{order.id}-{new Date().getFullYear()}</p>
                </div>
                <div className="text-right">
-                  <p className="font-bold text-lg">ShopSmart Solutions</p>
+                  <p className="font-bold text-lg">omnexa Solutions</p>
                   <p className="text-sm text-muted-foreground">123 Commerce Avenue</p>
                   <p className="text-sm text-muted-foreground">Bangalore, KA 560001</p>
                </div>
@@ -179,7 +179,7 @@ export function OrderSuccessPage() {
           <div className="bg-muted/30 p-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-6">
              <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground italic">Thank you for choosing ShopSmart. Your business is appreciated!</p>
+                <p className="text-sm text-muted-foreground italic">Thank you for choosing omnexa. Your business is appreciated!</p>
              </div>
              <div className="flex gap-4">
                 <button 

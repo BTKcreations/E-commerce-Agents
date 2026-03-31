@@ -372,7 +372,7 @@ export function CheckoutPage() {
               <div className="p-4 bg-muted/50 rounded-xl flex gap-3">
                  <ShieldCheck className="w-10 h-10 text-primary opacity-50 shrink-0" />
                  <p className="text-[10px] text-muted-foreground leading-tight">
-                   Your payment is encrypted and processed through our AI-secure gateway provided by ShopSmart Payments.
+                   Your payment is encrypted and processed through our AI-secure gateway provided by omnexa Payments.
                  </p>
               </div>
             </div>

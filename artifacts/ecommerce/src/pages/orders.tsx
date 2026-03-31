@@ -4,6 +4,7 @@ import { getSessionId } from "@/lib/session";
 import { Layout } from "@/components/layout";
 import { formatPrice } from "@/lib/utils";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 export function Orders() {
   const sessionId = getSessionId();
@@ -21,8 +22,8 @@ export function Orders() {
         ) : orders && orders.length > 0 ? (
           <div className="space-y-6">
             {orders.map((order) => (
-              <div key={order.id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <div className="bg-muted/50 p-6 border-b border-border flex flex-wrap gap-6 justify-between items-center">
+              <div key={order.id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow relative group">
+                <div className="bg-muted/50 p-6 border-b border-border flex flex-wrap gap-6 justify-between items-center relative z-10">
                   <div>
                     <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Order Placed</p>
                     <p className="font-medium">{order.createdAt ? format(new Date(order.createdAt), "MMM dd, yyyy") : "Recently"}</p>
@@ -45,24 +46,37 @@ export function Orders() {
                     <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Order ID</p>
                     <p className="font-medium">#{order.id.toString().padStart(6, '0')}</p>
                   </div>
+                  <div className="flex-1 flex justify-end">
+                    <Link href={`/order-success/${order.id}`}>
+                      <button className="bg-primary text-primary-foreground hover:opacity-90 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 whitespace-nowrap">
+                        View Invoice
+                      </button>
+                    </Link>
+                  </div>
                 </div>
                 
                 <div className="p-6">
                   {order.items.map((item, idx) => (
                     <div key={item.id} className={`flex items-center gap-4 ${idx !== 0 ? 'mt-6 pt-6 border-t border-border/50' : ''}`}>
-                      <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden shrink-0">
-                         <img 
-                          src={item.product?.imageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80"} 
-                          alt="Product" className="w-full h-full object-cover" 
-                        />
-                      </div>
+                      <Link href={`/products/${item.productId}`}>
+                        <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                           <img 
+                            src={item.product?.imageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80"} 
+                            alt={item.product?.name || "Product"} className="w-full h-full object-cover" 
+                          />
+                        </div>
+                      </Link>
                       <div className="flex-1">
-                        <h4 className="font-bold">{item.product?.name}</h4>
+                        <Link href={`/products/${item.productId}`} className="hover:underline hover:text-primary transition-colors">
+                          <h4 className="font-bold">{item.product?.name}</h4>
+                        </Link>
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
-                      <button className="text-primary hover:bg-primary/10 p-2 rounded-lg transition-colors">
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
+                      <Link href={`/order-success/${order.id}`}>
+                        <button className="text-primary hover:bg-primary/10 p-2 rounded-lg transition-colors group-hover:bg-primary/5">
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </Link>
                     </div>
                   ))}
                 </div>

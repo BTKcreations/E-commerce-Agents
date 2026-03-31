@@ -40,6 +40,14 @@ const mockDemandHistory = [
   { day: 'Sun', demand: 95 },
 ];
 
+const CATEGORY_MAP: Record<string, string[]> = {
+  "Electronics": ["MOBILES", "TABS", "LAPTOPS", "CAMERAS"],
+  "WEARABLES": ["WATCHES", "RINGS", "SUNGLASSES"],
+  "Audio": ["SPEAKERS", "EARPHONES"],
+  "Fashion": ["SHIRTS", "T SHIRTS", "JEANS", "KUTHAS AND DRESSE", "FOOTWEAR"],
+  "Appliances": ["TV", "AC", "REFRIGERATOR", "WASHING MACHINE"]
+};
+
 export function ProductManagement() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -58,7 +66,7 @@ export function ProductManagement() {
   // Forecast Hooks
   const { data: forecast, isLoading: isForecastLoading } = useGetPricingForecast(
     { productId: selectedProductId! }, 
-    { query: { enabled: !!selectedProductId } }
+    { enabled: !!selectedProductId } as any
   );
   const { mutate: adjustPrice, isPending: isAdjusting } = useAdjustPrice();
 
@@ -68,11 +76,17 @@ export function ProductManagement() {
     description: "",
     price: 0,
     category: "",
+    subcategory: "",
     brand: "",
     imageUrl: "",
     stock: 0,
-    tags: [] as string[]
+    tags: [] as string[],
+    specs: {} as Record<string, string>
   });
+  
+  const [specRows, setSpecRows] = useState<Array<{key: string, value: string}>>([]);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [isCustomSubcategory, setIsCustomSubcategory] = useState(false);
 
   const handleOpenModal = (product?: any) => {
     if (product) {
@@ -82,11 +96,17 @@ export function ProductManagement() {
         description: product.description || "",
         price: product.price,
         category: product.category,
+        subcategory: product.subcategory || "",
         brand: product.brand || "",
         imageUrl: product.imageUrl || "",
         stock: product.stock,
-        tags: product.tags || []
+        tags: product.tags || [],
+        specs: product.specs || {}
       });
+      const specs = Object.entries(product.specs || {}).map(([key, value]) => ({ key, value: String(value) }));
+      setSpecRows(specs);
+      setIsCustomCategory(!Object.keys(CATEGORY_MAP).includes(product.category));
+      setIsCustomSubcategory(product.category && !CATEGORY_MAP[product.category]?.includes(product.subcategory));
     } else {
       setEditingProduct(null);
       setFormData({
@@ -94,22 +114,46 @@ export function ProductManagement() {
         description: "",
         price: 0,
         category: "",
+        subcategory: "",
         brand: "",
         imageUrl: "",
         stock: 0,
-        tags: []
+        tags: [],
+        specs: {}
       });
+      setSpecRows([{ key: "Brand", value: "" }, { key: "SKU", value: "" }]);
+      setIsCustomCategory(false);
+      setIsCustomSubcategory(false);
     }
     setIsModalOpen(true);
   };
 
+  const addSpecRow = () => setSpecRows([...specRows, { key: "", value: "" }]);
+  const updateSpecRow = (idx: number, field: "key" | "value", val: string) => {
+    const newRows = [...specRows];
+    newRows[idx][field] = val;
+    setSpecRows(newRows);
+  };
+  const removeSpecRow = (idx: number) => setSpecRows(specRows.filter((_, i) => i !== idx));
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Process specs array into object
+    const finalSpecs: Record<string, string> = {};
+    specRows.forEach(row => {
+      if (row.key.trim()) finalSpecs[row.key.trim()] = row.value;
+    });
+
+    const submissionData = {
+      ...formData,
+      specs: finalSpecs
+    };
+
     if (editingProduct) {
       updateProduct({
         id: editingProduct.id,
-        data: formData
+        data: submissionData
       }, {
         onSuccess: () => {
           toast({ title: "Product Updated", description: `${formData.name} has been updated.` });
@@ -119,7 +163,7 @@ export function ProductManagement() {
       });
     } else {
       createProduct({
-        data: formData
+        data: submissionData
       }, {
         onSuccess: () => {
           toast({ title: "Product Created", description: `${formData.name} has been added to catalog.` });
@@ -146,7 +190,7 @@ export function ProductManagement() {
     adjustPrice({
       data: { productId: selectedProductId, reason: "Applying AI recommendation" }
     }, {
-      onSuccess: (data) => {
+      onSuccess: (data: any) => {
         toast({ 
           title: "Price Adjusted", 
           description: `Price changed from ${formatPrice(data.oldPrice)} to ${formatPrice(data.newPrice)}` 
@@ -201,6 +245,7 @@ export function ProductManagement() {
                 <tr className="bg-muted/50 border-b border-border">
                   <th className="px-6 py-5 font-bold text-sm uppercase tracking-wider">Product</th>
                   <th className="px-6 py-5 font-bold text-sm uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-5 font-bold text-sm uppercase tracking-wider">Subcategory</th>
                   <th className="px-6 py-5 font-bold text-sm uppercase tracking-wider">Price</th>
                   <th className="px-6 py-5 font-bold text-sm uppercase tracking-wider">Stock</th>
                   <th className="px-6 py-5 font-bold text-sm uppercase tracking-wider text-right">Actions</th>
@@ -229,6 +274,11 @@ export function ProductManagement() {
                     <td className="px-6 py-4">
                       <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full uppercase tracking-tighter">
                         {product.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 bg-accent/10 text-accent text-xs font-bold rounded-full uppercase tracking-tighter">
+                        {(product as any).subcategory}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-display font-medium text-lg">
@@ -328,17 +378,129 @@ export function ProductManagement() {
                       placeholder="e.g. Premium Wireless Headphones"
                     />
                   </div>
-                  <div className="space-y-2">
+                   <div className="space-y-2">
                     <label className="text-sm font-bold flex items-center gap-2">
                       <Layers className="w-4 h-4" /> Category
                     </label>
-                    <input 
+                    <select 
                       required
-                      value={formData.category}
-                      onChange={e => setFormData({...formData, category: e.target.value})}
+                      value={isCustomCategory ? "CUSTOM" : formData.category}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === "CUSTOM") {
+                          setIsCustomCategory(true);
+                          setFormData({ ...formData, category: "", subcategory: "" });
+                        } else {
+                          setIsCustomCategory(false);
+                          setFormData({ ...formData, category: val, subcategory: "" });
+                        }
+                      }}
                       className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 focus:outline-none focus:border-primary transition-all"
-                      placeholder="e.g. Electronics"
-                    />
+                    >
+                      <option value="">Select Category</option>
+                      {Object.keys(CATEGORY_MAP).map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                      <option value="CUSTOM">+ Add New Category</option>
+                    </select>
+                    {isCustomCategory && (
+                      <motion.input 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        placeholder="Enter New Category Name"
+                        value={formData.category}
+                        onChange={e => setFormData({ ...formData, category: e.target.value })}
+                        className="w-full mt-2 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 focus:outline-none focus:border-primary text-primary font-bold placeholder:text-primary/30"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold flex items-center gap-2">
+                      <Layers className="w-4 h-4" /> Subcategory
+                    </label>
+                    <select 
+                      required
+                      value={isCustomSubcategory ? "CUSTOM" : formData.subcategory}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === "CUSTOM") {
+                          setIsCustomSubcategory(true);
+                          setFormData({ ...formData, subcategory: "" });
+                        } else {
+                          setIsCustomSubcategory(false);
+                          setFormData({ ...formData, subcategory: val });
+                        }
+                      }}
+                      disabled={!formData.category}
+                      className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 focus:outline-none focus:border-primary transition-all disabled:opacity-50"
+                    >
+                      <option value="">Select Subcategory</option>
+                      {formData.category && CATEGORY_MAP[formData.category]?.map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                      <option value="CUSTOM">+ Add New Subcategory</option>
+                    </select>
+                    {isCustomSubcategory && (
+                      <motion.input 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        placeholder="Enter New Subcategory Name"
+                        value={formData.subcategory}
+                        onChange={e => setFormData({ ...formData, subcategory: e.target.value })}
+                        className="w-full mt-2 bg-accent/5 border border-accent/20 rounded-xl px-4 py-3 focus:outline-none focus:border-accent text-accent font-bold placeholder:text-accent/30"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4" /> Product Specifications
+                    </label>
+                    <button 
+                      type="button" 
+                      onClick={addSpecRow}
+                      className="text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 flex items-center gap-1.5 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Row
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {specRows.map((spec, idx) => (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        key={idx} 
+                        className="flex gap-3 items-start"
+                      >
+                        <input 
+                          placeholder="Attribute (e.g. Color)"
+                          value={spec.key}
+                          onChange={e => updateSpecRow(idx, "key", e.target.value)}
+                          className="flex-[2] bg-muted/30 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
+                        />
+                        <input 
+                          placeholder="Value (e.g. Red)"
+                          value={spec.value}
+                          onChange={e => updateSpecRow(idx, "value", e.target.value)}
+                          className="flex-[3] bg-muted/30 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => removeSpecRow(idx)}
+                          className="p-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </motion.div>
+                    ))}
+                    {specRows.length === 0 && (
+                      <p className="text-xs text-center text-muted-foreground py-4 border-2 border-dashed border-border rounded-2xl">
+                        No specifications added yet.
+                      </p>
+                    )}
                   </div>
                 </div>
 

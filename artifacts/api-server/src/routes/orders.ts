@@ -1,14 +1,15 @@
-import { Router, type IRouter } from "express";
+import { Router, type Response } from "express";
 import { db, ordersTable, cartItemsTable, productsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { authenticate, AuthRequest } from "../middleware/auth";
 
-const router: IRouter = Router();
+const router: Router = Router();
 
-router.get("/", async (req, res) => {
+router.get("/", authenticate, async (req: AuthRequest, res) => {
   try {
-    const sessionId = req.query.sessionId as string;
-    if (!sessionId) return res.status(400).json({ error: "sessionId required" });
-    const orders = await db.select().from(ordersTable).where(eq(ordersTable.sessionId, sessionId));
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const orders = await db.select().from(ordersTable).where(eq(ordersTable.userId, userId));
     return res.json(orders.map((o) => ({ ...o, total: Number(o.total) })));
   } catch (err) {
     return res.status(500).json({ error: "Failed to list orders" });
@@ -16,9 +17,10 @@ router.get("/", async (req, res) => {
 });
 
 
-router.post("/", async (req, res) => {
+router.post("/", authenticate, async (req: AuthRequest, res) => {
   try {
-    const { sessionId, shippingAddress, userId, paymentMethod } = req.body;
+    const { sessionId, shippingAddress, paymentMethod } = req.body;
+    const userId = req.user?.id;
     if (!sessionId) return res.status(400).json({ error: "sessionId required" });
 
     const cartItems = await db
@@ -35,11 +37,26 @@ router.post("/", async (req, res) => {
       })
     );
 
+    // 1. Validation: Check for sufficient stock
+    for (const item of itemsWithProducts) {
+      if (!item.product) {
+        return res.status(404).json({ error: `Product ${item.productId} not found` });
+      }
+      if (item.product.stock < item.quantity) {
+        return res.status(400).json({ 
+          error: `Insufficient stock for ${item.product.name}`, 
+          available: item.product.stock,
+          requested: item.quantity
+        });
+      }
+    }
+
     const total = itemsWithProducts.reduce((sum, item) => {
       const price = item.negotiatedPrice ? Number(item.negotiatedPrice) : Number(item.product?.price || 0);
       return sum + price * item.quantity;
     }, 0);
 
+    // 2. Wrap order creation and stock deduction in an implicit transaction-like sequence
     const [order] = await db
       .insert(ordersTable)
       .values({
@@ -49,11 +66,20 @@ router.post("/", async (req, res) => {
         items: itemsWithProducts,
         total: String(total),
         shippingAddress: shippingAddress || "Manual Pickup",
-        // paymentMethod is currently not in our DB schema, but we'll log it for now
       })
       .returning();
 
-    console.log(`Order ${order.id} placed with payment method: ${paymentMethod || "standard"}`);
+    // 3. Deduct stock for each item
+    for (const item of itemsWithProducts) {
+      await db
+        .update(productsTable)
+        .set({
+          stock: (item.product?.stock || 0) - item.quantity
+        })
+        .where(eq(productsTable.id, item.productId));
+    }
+
+    console.log(`Order ${order.id} placed. Stock updated for ${itemsWithProducts.length} items.`);
 
     await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
 

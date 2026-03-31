@@ -1,28 +1,51 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams, Link } from "wouter";
-import { ShoppingCart, Handshake, Star, ShieldCheck, TrendingDown, Send, Sparkles, AlertTriangle, CheckCircle, Clock, MessageSquare } from "lucide-react";
-import { useGetProduct, useGetPricingForecast, useAddToCart, useAskProductQuestion, useGetProductReviews, useAddProductReview, useGetCart } from "@workspace/api-client-react";
+import { useParams, Link, useLocation } from "wouter";
+import { ShoppingCart, Handshake, Star, ShieldCheck, TrendingDown, Send, Sparkles, AlertTriangle, CheckCircle, Clock, MessageSquare, ChevronRight, ChevronLeft, Info, Package, Truck, RotateCcw } from "lucide-react";
+import { useGetProduct, useGetPricingForecast, useAddToCart, useAskProductQuestion, useGetProductReviews, useAddProductReview, useGetCart, useGetRecommendations } from "@workspace/api-client-react";
 import { getSessionId } from "@/lib/session";
 import { Layout } from "@/components/layout";
 import { NegotiationDialog } from "@/components/negotiation-dialog";
+import { ProductCard } from "@/components/product-card";
 import { formatPrice, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { useAuth } from "@/contexts/auth-context";
 
 export function ProductDetail() {
   const params = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const productId = Number(params.id);
   const sessionId = getSessionId();
   const { toast } = useToast();
+  const [chartRange, setChartRange] = useState<30 | 7 | 90>(30);
 
   const [isNegOpen, setIsNegOpen] = useState(false);
   const [qaInput, setQaInput] = useState("");
   const [qaHistory, setQaHistory] = useState<Array<{q: string, a: any}>>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const { data: product, isLoading: isProdLoading, refetch: refetchProduct } = useGetProduct(productId);
   const { data: forecast } = useGetPricingForecast({ productId });
   const { data: reviews, refetch: refetchReviews } = useGetProductReviews(productId);
   const { data: cart } = useGetCart({ sessionId });
+
+  const { mutate: getRecommendations, data: recommendations } = useGetRecommendations();
+
+  useEffect(() => {
+    if (product) {
+      setSelectedImage(product.imageUrl || (product.images && product.images[0]) || null);
+      getRecommendations({ 
+        data: { 
+          category: product.category,
+          subcategory: (product as any).subcategory,
+          productId: product.id,
+          sessionId 
+        } as any
+      });
+    }
+  }, [product]);
   
   const [reviewAuthor, setReviewAuthor] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
@@ -37,6 +60,12 @@ export function ProductDetail() {
   const isInCart = cart?.items.some(item => item.productId === productId);
 
   const handleAddToCart = (negotiatedPrice?: number) => {
+    if (!user) {
+      toast({ title: "Authentication Required", description: "Please login to add items to your cart." });
+      setLocation("/login");
+      return;
+    }
+
     addToCart({
       data: {
         sessionId,
@@ -120,22 +149,48 @@ export function ProductDetail() {
           
           {/* Images */}
           <div className="w-full lg:w-1/2">
-            <div className="aspect-square bg-muted rounded-3xl overflow-hidden border border-border/50 shadow-sm relative group">
-              {/* stock minimalist product elegant */}
-              <img 
-                src={product.imageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80"} 
-                alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              
-              {/* Dynamic AI Badge */}
-              {forecast?.demandLevel === "surge" && (
-                <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-border shadow-lg flex items-center gap-2">
-                  <TrendingDown className="w-5 h-5 text-accent" />
-                  <div>
-                    <p className="text-xs font-bold text-accent uppercase tracking-wider">Dynamic Pricing</p>
-                    <p className="text-sm font-medium">Price adjusted for demand</p>
+            <div className="flex flex-col gap-4">
+              <div className="aspect-square bg-muted rounded-3xl overflow-hidden border border-border/50 shadow-sm relative group">
+                <AnimatePresence mode="wait">
+                  <motion.img 
+                    key={selectedImage}
+                    src={selectedImage || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80"} 
+                    alt={product.name}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                </AnimatePresence>
+                
+                {/* Dynamic AI Badge */}
+                {forecast?.demandLevel === "surge" && (
+                  <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-border shadow-lg flex items-center gap-2">
+                    <TrendingDown className="w-5 h-5 text-accent" />
+                    <div>
+                      <p className="text-xs font-bold text-accent uppercase tracking-wider">Dynamic Pricing</p>
+                      <p className="text-sm font-medium">Price adjusted for demand</p>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              {/* Thumbnails */}
+              {product.images && product.images.length > 1 && (
+                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                  {product.images.map((img: string, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImage(img)}
+                      className={cn(
+                        "w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0",
+                        selectedImage === img ? "border-primary shadow-lg scale-105" : "border-border/50 hover:border-primary/50"
+                      )}
+                    >
+                      <img src={img} alt={`${product.name} thumb ${idx}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -184,7 +239,14 @@ export function ProductDetail() {
                 </button>
                 
                 <button 
-                  onClick={() => setIsNegOpen(true)}
+                  onClick={() => {
+                    if (!user) {
+                      toast({ title: "Authentication Required", description: "Please login to negotiate prices." });
+                      setLocation("/login");
+                      return;
+                    }
+                    setIsNegOpen(true);
+                  }}
                   disabled={isInCart}
                   className={cn(
                     "flex-1 px-6 py-4 font-bold text-lg rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 border-0",
@@ -264,6 +326,165 @@ export function ProductDetail() {
 
           </div>
         </div>
+
+        {/* Market Analysis & Historical Chart */}
+        {forecast && forecast.history && forecast.history.length > 0 && (
+          <div className="mb-20">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-3xl font-display font-bold flex items-center gap-3">
+                <Sparkles className="w-8 h-8 text-primary" />
+                Advanced Market Analysis
+              </h3>
+              <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
+                {[7, 30, 90].map((days) => (
+                  <button
+                    key={days}
+                    onClick={() => setChartRange(days as any)}
+                    className={cn(
+                      "px-4 py-2 font-bold text-sm rounded-lg transition-all",
+                      chartRange === days
+                        ? "bg-background text-primary shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {days} Days
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              {/* Chart */}
+              <div className="lg:col-span-3 bg-card p-6 md:p-8 rounded-[2.5rem] border border-border shadow-sm">
+                <h4 className="font-bold mb-6 text-xl">Price & Demand Trends</h4>
+                <div className="h-[400px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={forecast.history.slice(-chartRange)}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                      <XAxis 
+                        dataKey="date" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickMargin={12}
+                        tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        style={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <YAxis 
+                        yAxisId="left" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickFormatter={(val) => `₹${val}`}
+                        style={{ fontSize: 12, fill: "hsl(var(--primary))" }}
+                      />
+                      <YAxis 
+                        yAxisId="right" 
+                        orientation="right" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickFormatter={(val) => `${val}%`}
+                        style={{ fontSize: 12, fill: "hsl(var(--accent))" }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '16px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        itemStyle={{ fontWeight: 'bold' }}
+                        labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '4px' }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                      <Line 
+                        yAxisId="left" 
+                        type="monotone" 
+                        dataKey="price" 
+                        name="Price (₹)" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={3} 
+                        dot={false}
+                        activeDot={{ r: 6, strokeWidth: 0 }}
+                      />
+                      <Line 
+                        yAxisId="right" 
+                        type="monotone" 
+                        dataKey="demand" 
+                        name="Demand (%)" 
+                        stroke="hsl(var(--accent))" 
+                        strokeWidth={3} 
+                        dot={false}
+                        activeDot={{ r: 6, strokeWidth: 0 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Predictions */}
+              <div className="lg:col-span-1 space-y-4">
+                <h4 className="font-bold mb-2 text-xl px-2">AI Forecast</h4>
+                
+                <div className="bg-primary/5 border border-primary/20 p-5 rounded-3xl relative overflow-hidden group">
+                  <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-20 transition-all">
+                    <TrendingDown className="w-16 h-16 text-primary" />
+                  </div>
+                  <h5 className="text-[11px] font-black uppercase tracking-widest text-primary/70 mb-2">1 Day Out</h5>
+                  <p className="font-bold text-foreground relative z-10">{forecast.predictions?.oneDay || "Monitoring..."}</p>
+                </div>
+
+                <div className="bg-accent/5 border border-accent/20 p-5 rounded-3xl relative overflow-hidden group">
+                  <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-20 transition-all">
+                    <TrendingDown className="w-16 h-16 text-accent" />
+                  </div>
+                  <h5 className="text-[11px] font-black uppercase tracking-widest text-accent/70 mb-2">1 Week Out</h5>
+                  <p className="font-bold text-foreground relative z-10">{forecast.predictions?.oneWeek || "Analyzing..."}</p>
+                </div>
+
+                <div className="bg-muted p-5 rounded-3xl relative overflow-hidden group border border-border">
+                  <h5 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2">30 Day Trend</h5>
+                  <p className="font-bold text-foreground relative z-10">{forecast.predictions?.oneMonth || forecast.forecast}</p>
+                </div>
+                
+                <div className="mt-4 p-5 bg-card border border-border shadow-sm rounded-3xl">
+                   <h5 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-1">Stock Health</h5>
+                   <p className={cn("font-bold text-lg capitalize", forecast.stockStatus === "critical" ? "text-destructive" : (forecast.stockStatus === "low" ? "text-amber-500" : "text-green-500"))}>
+                     {forecast.stockStatus}
+                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Product Specifications */}
+        {product.specs && Object.keys(product.specs).length > 0 && (
+          <div className="mb-20">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="p-3 bg-primary/10 rounded-2xl">
+                <Info className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-3xl font-display font-bold">Product Specifications</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Object.entries(product.specs).map(([key, value]) => {
+                if (!value || (typeof value === 'object' && Object.keys(value as any).length === 0)) return null;
+                
+                let icon = <Info className="w-5 h-5 text-primary" />;
+                if (key.toLowerCase().includes('weight')) icon = <Package className="w-5 h-5 text-primary" />;
+                if (key.toLowerCase().includes('shipping')) icon = <Truck className="w-5 h-5 text-primary" />;
+                if (key.toLowerCase().includes('return')) icon = <RotateCcw className="w-5 h-5 text-primary" />;
+
+                return (
+                  <div key={key} className="p-6 bg-card border border-border rounded-3xl shadow-sm hover:shadow-md transition-shadow flex items-start gap-4">
+                    <div className="p-2.5 bg-muted rounded-xl">
+                      {icon}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-1">{key.replace(/([A-Z])/g, ' $1')}</p>
+                      <p className="font-bold text-foreground">{String(value)}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* AI Q&A Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -513,6 +734,26 @@ export function ProductDetail() {
           </div>
         </div>
 
+        {/* Similar Products recommendations */}
+        {recommendations?.products && (recommendations.products as any[]).length > 0 && (
+          <div className="mt-24 pt-24 border-t border-border">
+             <div className="flex items-center justify-between mb-12">
+               <div>
+                <h3 className="text-3xl font-display font-bold mb-2">Related Products</h3>
+                <p className="text-muted-foreground">Handpicked suggestions related to this item</p>
+               </div>
+               <Link href="/products" className="text-primary font-bold hover:underline flex items-center gap-2">
+                 View all <ChevronRight className="w-4 h-4" />
+               </Link>
+             </div>
+             
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+               {(recommendations.products as any[]).slice(0, 4).map((rec: any) => (
+                 <ProductCard key={rec.id} product={rec} />
+               ))}
+             </div>
+          </div>
+        )}
       </div>
 
       <NegotiationDialog 

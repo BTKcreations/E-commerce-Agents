@@ -7,7 +7,7 @@ const router: IRouter = Router();
 
 router.post("/", async (req, res) => {
   try {
-    const { sessionId, productId, category, viewedProducts = [] } = req.body;
+    const { sessionId, productId, category, subcategory, viewedProducts = [] } = req.body;
 
     const allProducts = await db.select().from(productsTable);
 
@@ -15,6 +15,7 @@ router.post("/", async (req, res) => {
       id: p.id,
       name: p.name,
       category: p.category,
+      subcategory: p.subcategory,
       price: Number(p.price),
       rating: p.rating,
       tags: p.tags,
@@ -27,19 +28,28 @@ Respond ONLY with valid JSON: { "productIds": [1,2,3,4], "reasoning": "short exp
     const userContext = `User session: ${sessionId}
 Current product: ${productId || "none"}
 Category interest: ${category || "general"}
+Subcategory interest: ${subcategory || "none"}
 Previously viewed product IDs: ${viewedProducts.join(", ") || "none"}
 Available products: ${JSON.stringify(contextProducts)}`;
 
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_completion_tokens: 512,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContext },
-      ],
-    });
+    let content = "{}";
+    try {
+      const completion = await openai.chat.completions.create({
+        model: AI_MODEL,
+        max_completion_tokens: 512,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContext },
+        ],
+      });
+      content = completion.choices[0]?.message?.content || "{}";
+    } catch (aiError: any) {
+      console.warn("AI recommendation failed (is the AI server running?), falling back to default items.", aiError.message);
+      // Fallback to top 4 products
+      const fallbackIds = allProducts.slice(0, 4).map(p => p.id);
+      content = JSON.stringify({ productIds: fallbackIds, reasoning: "Based on store popularity" });
+    }
 
-    const content = completion.choices[0]?.message?.content || "{}";
     let parsed: { productIds?: number[]; reasoning?: string } = {};
     try {
       parsed = JSON.parse(content);

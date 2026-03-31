@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useGetCart, useCreateOrder } from "@workspace/api-client-react";
@@ -25,7 +25,7 @@ type Step = "shipping" | "payment" | "review";
 
 export function CheckoutPage() {
   const [step, setStep] = useState<Step>("shipping");
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const sessionId = getSessionId();
   const { data: cart } = useGetCart({ sessionId });
   const { mutate: createOrder, isPending: isOrdering } = useCreateOrder();
@@ -42,6 +42,13 @@ export function CheckoutPage() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState<"card" | "upi" | "cod">("card");
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast({ title: "Authentication Required", description: "You must log in to access checkout." });
+      setLocation("/login");
+    }
+  }, [user, authLoading, setLocation, toast]);
 
   const subtotal = cart?.total || 0;
   const shipping = 0;

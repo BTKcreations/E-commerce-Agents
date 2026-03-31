@@ -33,16 +33,26 @@ Specs: ${JSON.stringify(product.specs || {})}
 Rating: ${product.rating}/5 (${product.reviewCount} reviews)
 Reviews: ${reviews.slice(0, 5).map((r) => `[${r.rating}/5] ${r.body}`).join("\n")}`;
 
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_completion_tokens: 1024,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `${productContext}\n\nCustomer question: ${question}` },
-      ],
-    });
-
-    const content = completion.choices[0]?.message?.content || "{}";
+    let content = "{}";
+    try {
+      const completion = await openai.chat.completions.create({
+        model: AI_MODEL,
+        max_completion_tokens: 1024,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `${productContext}\n\nCustomer question: ${question}` },
+        ],
+      });
+      content = completion.choices[0]?.message?.content || "{}";
+    } catch (aiError: any) {
+      console.warn("AI QA failed, falling back gracefully.", aiError.message);
+      content = JSON.stringify({
+        answer: "The AI assistant is currently unavailable, but this product is highly rated.",
+        pros: ["Great quality"],
+        cons: [],
+        confidence: 0.5
+      });
+    }
     let parsed: { answer?: string; pros?: string[]; cons?: string[]; confidence?: number } = {};
     try {
       parsed = JSON.parse(content);
@@ -90,19 +100,24 @@ Respond ONLY with JSON:
       tags: p.tags,
     }));
 
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_completion_tokens: 512,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `User query: "${query}"\nAvailable products: ${JSON.stringify(catalogSummary)}`,
-        },
-      ],
-    });
-
-    const content = completion.choices[0]?.message?.content || "{}";
+    let content = "{}";
+    try {
+      const completion = await openai.chat.completions.create({
+        model: AI_MODEL,
+        max_completion_tokens: 512,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `User query: "${query}"\nAvailable products: ${JSON.stringify(catalogSummary)}`,
+          },
+        ],
+      });
+      content = completion.choices[0]?.message?.content || "{}";
+    } catch (aiError: any) {
+      console.warn("AI Search failed, falling back to basic search.", aiError.message);
+      // Let the code fall through to the basic string search below
+    }
     let parsed: { interpretation?: string; filters?: Record<string, unknown>; productIds?: number[] } = {};
     try {
       parsed = JSON.parse(content);

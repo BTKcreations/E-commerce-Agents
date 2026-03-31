@@ -5,12 +5,14 @@ import { getSessionId } from "@/lib/session";
 import { Layout } from "@/components/layout";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
 
 export function Cart() {
   const sessionId = getSessionId();
   const [, setLocation] = useLocation();
   const { data: cart, isLoading, refetch } = useGetCart({ sessionId });
-
+  const { user } = useAuth();
+  
   const { mutate: remove, isPending: isRemoving } = useRemoveFromCart();
   const { mutate: update, isPending: isUpdating } = useUpdateCartItem();
   const { mutate: createOrder, isPending: isOrdering } = useCreateOrder();
@@ -32,6 +34,11 @@ export function Cart() {
   };
 
   const handleCheckout = () => {
+    if (!user) {
+      toast({ title: "Authentication Required", description: "You must log in to complete your checkout." });
+      setLocation("/login");
+      return;
+    }
     setLocation("/checkout");
   };
 

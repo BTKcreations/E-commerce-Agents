@@ -24,6 +24,7 @@ export interface Product {
   category: string;
   brand?: string;
   imageUrl?: string;
+  images?: string[];
   stock: number;
   rating: number;
   reviewCount: number;
@@ -167,6 +168,16 @@ export interface PricingForecastResponse {
   forecast: string;
   alerts?: string[];
   stockStatus: string;
+  history: {
+    date: string;
+    price: number;
+    demand: number;
+  }[];
+  predictions: {
+    oneDay: string;
+    oneWeek: string;
+    oneMonth: string;
+  };
 }
 
 export interface AdjustPriceBody {

@@ -9,10 +9,19 @@ const JWT_SECRET = process.env["JWT_SECRET"] || "default_secret";
 
 router.post("/register", async (req, res) => {
   try {
+    console.log("Registration attempt:", req.body);
     const { name, email, password } = req.body;
-    const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, email));
-    if (existingUser.length > 0) return res.status(400).json({ error: "User already exists" });
 
+    if (!name || !email || !password) {
+      console.log("Registration failed: Missing fields");
+      return res.status(400).json({ error: "All fields (name, email, password) are required" });
+    }
+
+    const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    if (existingUser.length > 0) {
+      console.log("Registration failed: User exists", email);
+      return res.status(400).json({ error: "An account with this email already exists" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const [user] = await db.insert(usersTable).values({

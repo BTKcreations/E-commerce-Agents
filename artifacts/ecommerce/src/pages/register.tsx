@@ -32,10 +32,12 @@ export function RegisterPage() {
         setLocation("/");
       },
       onError: (err: any) => {
+        console.error("Full Registration Error:", err);
+        const errorMessage = err.response?.data?.error || err.error || err.message || "Could not create account";
         toast({
           variant: "destructive",
           title: "Registration failed",
-          description: err.response?.data?.error || "Could not create account",
+          description: errorMessage,
         });
       }
     });

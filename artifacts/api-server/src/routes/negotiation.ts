@@ -69,16 +69,26 @@ EXTREMELY IMPORTANT: Respond ONLY with a JSON object. No other text.
   "message": "your human-like response to the customer"
 }`;
 
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_completion_tokens: 256,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: message },
-      ],
-    });
-
-    const content = completion.choices[0]?.message?.content || "{}";
+    let content = "{}";
+    try {
+      const completion = await openai.chat.completions.create({
+        model: AI_MODEL,
+        max_completion_tokens: 256,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message },
+        ],
+      });
+      content = completion.choices[0]?.message?.content || "{}";
+    } catch (aiError: any) {
+      console.warn("AI Negotiation Start failed", aiError.message);
+      content = JSON.stringify({
+        status: "countered",
+        counterOffer: Math.round(originalPrice * 0.95),
+        userOffer: 0,
+        message: "Our AI agent is currently offline. I can offer you a 5% discount.",
+      });
+    }
     let parsed: { status?: string; counterOffer?: number; userOffer?: number; message?: string } = {};
     try {
       parsed = JSON.parse(content);
@@ -181,13 +191,22 @@ EXTREMELY IMPORTANT: Respond ONLY with JSON.
       { role: "user", content: message },
     ];
 
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_completion_tokens: 256,
-      messages: currentMessages as any,
-    });
-
-    const content = completion.choices[0]?.message?.content || "{}";
+    let content = "{}";
+    try {
+      const completion = await openai.chat.completions.create({
+        model: AI_MODEL,
+        max_completion_tokens: 256,
+        messages: currentMessages as any,
+      });
+      content = completion.choices[0]?.message?.content || "{}";
+    } catch (aiError: any) {
+      console.warn("AI Negotiation Offer failed", aiError.message);
+      content = JSON.stringify({
+        status: "countered",
+        counterOffer: Number(negotiation.currentOffer),
+        message: "Our AI agent is currently offline. I cannot review further offers right now.",
+      });
+    }
     let parsed: { status?: string; counterOffer?: number; userOffer?: number; finalPrice?: number; message?: string } = {};
     try {
       parsed = JSON.parse(content);

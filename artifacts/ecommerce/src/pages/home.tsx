@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 export function Home() {
   const sessionId = getSessionId();
   const [recommendations, setRecommendations] = useState<any>(null);
-  
+
   const { mutate: getRecs } = useGetRecommendations();
   const { data: popularProducts, isLoading } = useListProducts({ sortBy: "rating" });
 
@@ -35,14 +35,14 @@ export function Home() {
       {/* Hero Section */}
       <section className="relative w-full h-[600px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img 
+          <img
             src={`${import.meta.env.BASE_URL}images/hero-bg.png`}
             alt="Hero background"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-background/80 dark:bg-background/90 backdrop-blur-[2px]" />
         </div>
-        
+
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -54,20 +54,20 @@ export function Home() {
               <span>Personalized Service & Real-time Assistance</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-display font-extrabold text-foreground mb-6 max-w-4xl mx-auto leading-tight italic">
-              “Smart Agents, Smarter Buys.”
+              “Smart Shopping Starts Here”
             </h1>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
               Experience dynamic pricing, personalized recommendations, and AI-driven automation for a seamless shopping experience.
             </p>
             <div className="flex items-center justify-center gap-4">
-              <Link 
-                href="/products" 
+              <Link
+                href="/products"
                 className="px-8 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 transition-all duration-300"
               >
                 Shop Collection
               </Link>
-              <Link 
-                href="/dashboard" 
+              <Link
+                href="/dashboard"
                 className="px-8 py-4 rounded-xl bg-card text-foreground border border-border font-bold text-lg hover:bg-muted hover:shadow-lg transition-all duration-300 flex items-center gap-2"
               >
                 View Shop Dashboard
@@ -83,7 +83,7 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((f, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -113,7 +113,7 @@ export function Home() {
             <p className="text-muted-foreground mb-8 max-w-2xl bg-primary/5 p-4 rounded-xl border border-primary/10 italic">
               " {recommendations.reasoning} "
             </p>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {recommendations.products.slice(0, 4).map((product: any, i: number) => (
                 <ProductCard key={product.id} product={product} index={i} />
@@ -135,10 +135,10 @@ export function Home() {
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          
+
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[1,2,3,4].map(n => (
+              {[1, 2, 3, 4].map(n => (
                 <div key={n} className="h-[400px] bg-muted animate-pulse rounded-2xl" />
               ))}
             </div>

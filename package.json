@@ -8,6 +8,7 @@
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "db:push": "pnpm --filter @workspace/db run push",
     "db:seed": "tsx --env-file=.env ./scripts/seed.ts",
+    "db:seed:dummy": "tsx --env-file=.env ./artifacts/api-server/src/scripts/seed-dummyjson.ts",
     "db:reset": "tsx --env-file=.env ./artifacts/api-server/src/scripts/reset-db.ts"
   },
   "private": true,

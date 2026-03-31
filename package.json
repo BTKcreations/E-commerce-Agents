@@ -7,12 +7,13 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "db:push": "pnpm --filter @workspace/db run push",
-    "db:seed": "pnpm --filter @workspace/scripts exec tsx ./seed.ts",
-    "db:reset": "pnpm --filter @workspace/api-server exec tsx ./src/scripts/reset-db.ts"
+    "db:seed": "tsx --env-file=.env ./scripts/seed.ts",
+    "db:reset": "tsx --env-file=.env ./artifacts/api-server/src/scripts/reset-db.ts"
   },
   "private": true,
   "devDependencies": {
-    "typescript": "~5.9.2",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "tsx": "catalog:",
+    "typescript": "~5.9.2"
   }
 }

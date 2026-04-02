@@ -44,7 +44,8 @@ Available products: ${JSON.stringify(contextProducts)}`;
       });
       content = completion.choices[0]?.message?.content || "{}";
     } catch (aiError: any) {
-      console.warn("AI recommendation failed (is the AI server running?), falling back to default items.", aiError.message);
+      const isConnectionError = aiError.message?.toLowerCase().includes("connection") || aiError.message?.toLowerCase().includes("fetch");
+      console.warn(`AI Recommendation failed (${isConnectionError ? "Check if AI server/Ollama is running at " + (openai as any).baseURL : "AI Error"}), falling back to default items.`, aiError.message);
       // Fallback to top 4 products
       const fallbackIds = allProducts.slice(0, 4).map(p => p.id);
       content = JSON.stringify({ productIds: fallbackIds, reasoning: "Based on store popularity" });

@@ -58,7 +58,8 @@ Rating: ${product.rating}`;
       });
       content = completion.choices[0]?.message?.content || "{}";
     } catch (aiError: any) {
-      console.warn("AI Forecast failed, falling back to deterministic algorithms.", aiError.message);
+      const isConnectionError = aiError.message?.toLowerCase().includes("connection") || aiError.message?.toLowerCase().includes("fetch");
+      console.warn(`AI Forecast failed (${isConnectionError ? "Check if AI server/Ollama is running at " + (openai as any).baseURL : "AI Error"}), falling back to deterministic algorithms.`, aiError.message);
       // Let it fall to the catch below for JSON parsing
     }
 

@@ -34,7 +34,8 @@ const GROUPS = [
       { name: "T SHIRTS", query: "search?q=t-shirt" },
       { name: "JEANS", query: "search?q=jeans" },
       { name: "DRESSES", query: "category/womens-dresses" },
-      { name: "FOOTWEAR", query: "category/mens-shoes" }
+      { name: "MENS FOOTWEAR", query: "category/mens-shoes" },
+      { name: "WOMENS FOOTWEAR", query: "category/womens-shoes" }
     ]
   },
   { 
@@ -44,6 +45,45 @@ const GROUPS = [
       { name: "AC", query: "search?q=air+conditioner" },
       { name: "REFRIGERATOR", query: "search?q=refrigerator" },
       { name: "WASHING MACHINE", query: "search?q=washing+machine" }
+    ]
+  },
+  { 
+    name: "Home & Living", 
+    subcategories: [
+      { name: "FURNITURE", query: "category/furniture" },
+      { name: "DECORATION", query: "category/home-decoration" },
+      { name: "KITCHEN", query: "category/kitchen-accessories" }
+    ]
+  },
+  { 
+    name: "Beauty & Care", 
+    subcategories: [
+      { name: "BEAUTY", query: "category/beauty" },
+      { name: "FRAGRANCES", query: "category/fragrances" },
+      { name: "SKIN CARE", query: "category/skin-care" }
+    ]
+  },
+  { 
+    name: "Accessories", 
+    subcategories: [
+      { name: "MOBILE CASE", query: "category/mobile-accessories" },
+      { name: "WOMENS BAGS", query: "category/womens-bags" },
+      { name: "JEWELLERY", query: "category/womens-jewellery" }
+    ]
+  },
+  { 
+    name: "Sports & Vehicles", 
+    subcategories: [
+      { name: "SPORTS", query: "category/sports-accessories" },
+      { name: "MOTORCYCLE", query: "category/motorcycle" },
+      { name: "VEHICLE", query: "category/vehicle" }
+    ]
+  },
+  { 
+    name: "Essentials", 
+    subcategories: [
+      { name: "GROCERIES", query: "category/groceries" },
+      { name: "TOPS", query: "category/tops" }
     ]
   },
 ];
@@ -59,7 +99,7 @@ async function seedDatabase() {
     await db.execute(sql`TRUNCATE TABLE reviews CASCADE;`);
 
     // 2. Fetch products per group
-    console.log("🌍 Fetching 5 items per group from DummyJSON...");
+    console.log(`🌍 Fetching items per group from DummyJSON to reach 150+ products...`);
     
     let totalInserted = 0;
 
@@ -68,7 +108,7 @@ async function seedDatabase() {
       
       for (const sub of group.subcategories) {
         const separator = sub.query.includes("?") ? "&" : "?";
-        const url = `https://dummyjson.com/products/${sub.query}${separator}limit=6`;
+        const url = `https://dummyjson.com/products/${sub.query}${separator}limit=10`;
         const res = await fetch(url);
         if (!res.ok) continue;
 
@@ -113,7 +153,7 @@ async function seedDatabase() {
       }
     }
 
-    console.log(`\n✨ Success! Seeded exactly ${totalInserted} items from DummyJSON across 5 groups.`);
+    console.log(`\n✨ Success! Seeded exactly ${totalInserted} items from DummyJSON across ${GROUPS.length} groups.`);
     setTimeout(() => process.exit(0), 1000);
 
   } catch (error) {

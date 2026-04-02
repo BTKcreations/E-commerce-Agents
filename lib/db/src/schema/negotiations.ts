@@ -6,7 +6,7 @@ import { productsTable } from "./products";
 export const negotiationsTable = pgTable("negotiations", {
   id: serial("id").primaryKey(),
   sessionId: text("session_id").notNull(),
-  productId: integer("product_id").notNull().references(() => productsTable.id),
+  productId: integer("product_id").notNull().references(() => productsTable.id, { onDelete: "cascade" }),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }).notNull(),
   currentOffer: decimal("current_offer", { precision: 10, scale: 2 }).notNull(),
   finalPrice: decimal("final_price", { precision: 10, scale: 2 }),

@@ -66,7 +66,7 @@ export function ProductManagement() {
   // Forecast Hooks
   const { data: forecast, isLoading: isForecastLoading } = useGetPricingForecast(
     { productId: selectedProductId! }, 
-    { enabled: !!selectedProductId } as any
+    { query: { enabled: !!selectedProductId } }
   );
   const { mutate: adjustPrice, isPending: isAdjusting } = useAdjustPrice();
 
@@ -175,11 +175,20 @@ export function ProductManagement() {
   };
 
   const handleDelete = (id: number, name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
+    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
       deleteProduct({ id }, {
         onSuccess: () => {
-          toast({ title: "Product Deleted", description: `${name} has been removed.` });
+          toast({ title: "Product Deleted", description: `${name} has been removed successfully.` });
           refetch();
+        },
+        onError: (err: any) => {
+          console.error("Delete Error:", err);
+          const errorMsg = err.response?.data?.error || err.message || "Failed to delete product";
+          toast({ 
+            variant: "destructive",
+            title: "Delete Failed", 
+            description: errorMsg
+          });
         }
       });
     }
@@ -313,11 +322,12 @@ export function ProductManagement() {
                           <Pencil className="w-5 h-5" />
                         </button>
                         <button 
+                          disabled={isDeleting}
                           onClick={() => handleDelete(product.id, product.name)}
                           title="Delete Product"
-                          className="p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-xl transition-all"
+                          className="p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-xl transition-all disabled:opacity-50"
                         >
-                          <Trash2 className="w-5 h-5" />
+                          {isDeleting ? <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Trash2 className="w-5 h-5" />}
                         </button>
                       </div>
                     </td>

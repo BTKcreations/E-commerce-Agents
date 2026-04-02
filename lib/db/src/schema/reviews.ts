@@ -5,7 +5,7 @@ import { productsTable } from "./products";
 
 export const reviewsTable = pgTable("reviews", {
   id: serial("id").primaryKey(),
-  productId: integer("product_id").notNull().references(() => productsTable.id),
+  productId: integer("product_id").notNull().references(() => productsTable.id, { onDelete: "cascade" }),
   author: text("author").notNull(),
   rating: integer("rating").notNull(),
   title: text("title"),

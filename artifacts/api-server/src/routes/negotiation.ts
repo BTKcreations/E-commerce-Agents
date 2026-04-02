@@ -81,7 +81,8 @@ EXTREMELY IMPORTANT: Respond ONLY with a JSON object. No other text.
       });
       content = completion.choices[0]?.message?.content || "{}";
     } catch (aiError: any) {
-      console.warn("AI Negotiation Start failed", aiError.message);
+      const isConnectionError = aiError.message?.toLowerCase().includes("connection") || aiError.message?.toLowerCase().includes("fetch");
+      console.warn(`AI Negotiation Start failed (${isConnectionError ? "Check if AI server/Ollama is running at " + (openai as any).baseURL : "AI Error"}), falling back to default 5% discount.`, aiError.message);
       content = JSON.stringify({
         status: "countered",
         counterOffer: Math.round(originalPrice * 0.95),
@@ -200,7 +201,8 @@ EXTREMELY IMPORTANT: Respond ONLY with JSON.
       });
       content = completion.choices[0]?.message?.content || "{}";
     } catch (aiError: any) {
-      console.warn("AI Negotiation Offer failed", aiError.message);
+      const isConnectionError = aiError.message?.toLowerCase().includes("connection") || aiError.message?.toLowerCase().includes("fetch");
+      console.warn(`AI Negotiation Offer failed (${isConnectionError ? "Check if AI server/Ollama is running at " + (openai as any).baseURL : "AI Error"}), falling back to internal logic.`, aiError.message);
       content = JSON.stringify({
         status: "countered",
         counterOffer: Number(negotiation.currentOffer),

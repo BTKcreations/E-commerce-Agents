@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Search, Sparkles, Filter, SlidersHorizontal, Star, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useListProducts, useChatSearch, ListProductsSortBy } from "@workspace/api-client-react";
 import { getSessionId } from "@/lib/session";
@@ -6,6 +6,7 @@ import { Layout } from "@/components/layout";
 import { ProductCard } from "@/components/product-card";
 import { formatPrice, cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { Slider } from "@/components/ui/slider";
 
 export function Products() {
   const sessionId = getSessionId();
@@ -30,6 +31,9 @@ export function Products() {
     priceRange: { min: 0, max: 0 },
     totalCount: 0
   });
+  
+  const lastMajorFilter = useRef("");
+  const isInitialLoad = useRef(true);
 
   const { data: standardProducts, isLoading } = useListProducts({ 
     category: activeCategory !== "All" ? activeCategory : undefined,
@@ -57,13 +61,19 @@ export function Products() {
           const data = await res.json();
           setMetadata(prev => ({ ...prev, ...data }));
           
-          // Reset slider ONLY when category or search changes
-          if (priceRange[1] === 1000000 || data.priceRange?.max > 0) {
-            // Check if we need a reset (e.g. initial load or category change)
-            const isInitial = priceRange[1] === 1000000;
-            if (isInitial) {
-              setPriceRange([data.priceRange.min, data.priceRange.max]);
-            }
+          const currentMajorFilter = `${activeCategory}-${searchQuery}`;
+          
+          if (isInitialLoad.current || currentMajorFilter !== lastMajorFilter.current) {
+            // Full reset for category/search changes
+            setPriceRange([data.priceRange.min, data.priceRange.max]);
+            lastMajorFilter.current = currentMajorFilter;
+            isInitialLoad.current = false;
+          } else {
+            // Clamp existing range for minor filter changes (brands, subcategories)
+            setPriceRange(prev => [
+              Math.max(prev[0], data.priceRange.min),
+              Math.min(prev[1], data.priceRange.max)
+            ]);
           }
         }
       } catch (err) {
@@ -223,18 +233,21 @@ export function Products() {
               <div className="mb-8 p-4 bg-muted/30 rounded-xl border border-border/50">
                 <h4 className="font-semibold mb-4 text-sm text-muted-foreground uppercase tracking-wider">Price Range</h4>
                 <div className="px-2">
-                  <div className="flex justify-between text-xs font-bold mb-3">
+                  <div className="flex justify-between text-xs font-bold mb-4">
                     <span>{formatPrice(priceRange[0])}</span>
                     <span>{formatPrice(priceRange[1])}</span>
                   </div>
-                  <input
-                    type="range"
+                  <Slider
                     min={metadata.priceRange.min}
                     max={metadata.priceRange.max}
-                    value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                    className="w-full accent-primary bg-muted rounded-lg h-1.5 cursor-pointer"
+                    step={1}
+                    value={[priceRange[0], priceRange[1]]}
+                    onValueChange={(vals) => setPriceRange(vals as [number, number])}
+                    className="py-4"
                   />
+                  <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                    Showing products from {formatPrice(priceRange[0])} to {formatPrice(priceRange[1])}
+                  </p>
                 </div>
               </div>
 

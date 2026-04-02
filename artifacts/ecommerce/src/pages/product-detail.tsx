@@ -27,7 +27,10 @@ export function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const { data: product, isLoading: isProdLoading, refetch: refetchProduct } = useGetProduct(productId);
-  const { data: forecast } = useGetPricingForecast({ productId });
+  const { data: forecast } = useGetPricingForecast(
+    { productId }, 
+    { query: { enabled: !!productId && !isNaN(productId) } }
+  );
   const { data: reviews, refetch: refetchReviews } = useGetProductReviews(productId);
   const { data: cart } = useGetCart({ sessionId });
 
